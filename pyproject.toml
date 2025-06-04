@@ -1,0 +1,16 @@
+[project]
+name = "fitbox"
+version = "0.1.0"
+description = "Application for sport"
+authors = [
+    {name = "Sergei Storozhuk",email = "s_storozhuk@wargaming.net"}
+]
+readme = "README.md"
+requires-python = ">=3.11"
+dependencies = [
+]
+
+
+[build-system]
+requires = ["poetry-core>=2.0.0,<3.0.0"]
+build-backend = "poetry.core.masonry.api"
