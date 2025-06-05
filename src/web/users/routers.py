@@ -1,3 +1,5 @@
+from datetime import date
+
 import sqlalchemy
 from fastapi import (
     APIRouter,
@@ -24,6 +26,7 @@ from web.users.schemas import (
     UserUpdate,
     UserListRead
 )
+from web.users.services import calc_age
 from web.users.users import (
     current_active_user,
     current_superuser,
@@ -47,8 +50,11 @@ async def get_all_users(
         .where(User.is_superuser == False)
     )
     query = user_filter.filter(query)
-    users = await db_session.execute(query)
-    return users.scalars().unique().all()
+    result = await db_session.execute(query)
+    users = result.scalars().unique().all()
+    for user in users:
+        user.age = calc_age(user.date_of_birth, date.today())
+    return users
 
 
 @router.get(
@@ -62,7 +68,10 @@ async def get_paginated_users(
 ):
     query = select(User).where(User.is_superuser == False)
     query = user_filter.filter(query)
-    return await paginate(db_session, query)
+    page = await paginate(db_session, query)
+    for user in page.items:
+        user.age = calc_age(user.date_of_birth, date.today())
+    return page
 
 
 async def get_user_or_404(
@@ -115,6 +124,7 @@ async def me(
     },
 )
 async def get_user(user=Depends(get_user_or_404)):
+    user.age = calc_age(user.date_of_birth, date.today())
     return schemas.model_validate(UserRead, user)
 
 

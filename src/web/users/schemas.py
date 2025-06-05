@@ -15,6 +15,11 @@ class UserRead(schemas.BaseUser[uuid.UUID]):
     date_of_birth: date | None
     created_at: datetime
     updated_at: datetime | None
+    age: int | None = 0
+    balance_training: float | None = 0.0
+    status: str | None = None
+    score: float | None = 0.0
+    count_trainings: int | None = 0
     is_active: bool = Field(True, exclude=True)
     is_verified: bool = Field(False, exclude=True)
     is_superuser: bool = Field(False, exclude=True)
@@ -56,6 +61,11 @@ class UserListRead(schemas.BaseUser[uuid.UUID]):
     phone: str | None
     gender: str | None = None
     date_of_birth: date | None
+    age: int | None = 0
+    balance_training: float | None = 0.0
+    status: str | None = None
+    score: float | None = 0.0
+    count_trainings: int | None = 0
     is_active: bool = Field(True, exclude=True)
     is_verified: bool = Field(False, exclude=True)
     is_superuser: bool = Field(False, exclude=True)
