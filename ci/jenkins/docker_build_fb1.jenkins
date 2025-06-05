@@ -44,7 +44,7 @@ pipeline {
                 echo " ============== copy files =================="
                 dir ('./ci') {
                     sh '''
-                    scp docker-compose_prod.yaml root@ub2:/root/app/FITBOX/docker-compose.yaml
+                    scp docker-compose.yaml root@ub2:/root/app/FITBOX/docker-compose.yaml
                     '''
                 }
             }
