@@ -1,0 +1,61 @@
+import uuid
+from datetime import datetime, date, time
+
+from fastapi_users import schemas
+from pydantic import EmailStr, Field, BaseModel, Extra
+
+
+class UserRead(schemas.BaseUser[uuid.UUID]):
+    email: EmailStr
+    name: str
+    last_name: str
+    father_name: str | None
+    phone: str | None
+    gender: str | None
+    date_of_birth: date | None
+    created_at: datetime
+    updated_at: datetime | None
+    is_active: bool = Field(True, exclude=True)
+    is_verified: bool = Field(False, exclude=True)
+    is_superuser: bool = Field(False, exclude=True)
+
+
+class UserCreate(schemas.BaseUserCreate):
+    email: EmailStr
+    password: str
+    name: str
+    last_name: str
+    father_name: str | None = None
+    phone: str | None = None
+    gender: str | None = None
+    date_of_birth: date | None = None
+    is_active: bool = Field(True, exclude=True)
+    is_verified: bool = Field(False, exclude=True)
+    is_superuser: bool = Field(False, exclude=True)
+
+
+class UserUpdate(schemas.BaseUserUpdate):
+    email: EmailStr | None = None
+    password: str | None = None
+    name: str | None = None
+    last_name: str | None = None
+    father_name: str | None = None
+    phone: str | None = None
+    gender: str | None = None
+    date_of_birth: date | None
+    is_active: bool = Field(True, exclude=True)
+    is_verified: bool = Field(False, exclude=True)
+    is_superuser: bool = Field(False, exclude=True)
+
+
+class UserListRead(schemas.BaseUser[uuid.UUID]):
+    email: EmailStr
+    name: str
+    last_name: str
+    father_name: str | None
+    phone: str | None
+    gender: str | None = None
+    date_of_birth: date | None
+    is_active: bool = Field(True, exclude=True)
+    is_verified: bool = Field(False, exclude=True)
+    is_superuser: bool = Field(False, exclude=True)

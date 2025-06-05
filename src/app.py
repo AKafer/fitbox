@@ -1,12 +1,9 @@
 from logging import config as logging_config
 
 from fastapi import FastAPI
-# from fastapi_pagination import add_pagination
+from fastapi_pagination import add_pagination
 from fastapi.middleware.cors import CORSMiddleware
 from starlette.responses import PlainTextResponse
-from starlette.staticfiles import StaticFiles
-
-import settings
 from routers import api_v1_router
 
 
@@ -32,7 +29,7 @@ def create_app() -> FastAPI:
         openapi_url="/api/openapi.json",
     )
     setup_routes(app)
-    # add_pagination(app)
+    add_pagination(app)
     # app.mount(f"/api/{settings.STATIC_FOLDER}", StaticFiles(directory='static'), name='static')
     # logging_config.dictConfig(settings.LOGGING)
     app.add_middleware(

@@ -1,0 +1,48 @@
+version: "3.8"
+
+services:
+  db:
+    container_name: fitbox_db
+    image: postgres:14-bullseye
+    restart: on-failure
+    volumes:
+      - postgres_data_fitbox:/var/lib/postgresql/data/
+    env_file:
+      - ./.env
+    healthcheck:
+      test: [ "CMD-SHELL", "pg_isready -U postgres"]
+      interval: 10s
+      timeout: 3s
+      retries: 3
+    networks:
+      - fitbox
+    ports:
+      - "5433:5432"
+
+  app:
+    container_name: fitbox_app
+    image: akafer/fitbox
+    restart: on-failure
+    ports:
+      - "8850:8850"
+    command: >
+      bash -c "alembic upgrade head
+      && python3 /app/src/scripts/create_user.py
+      && python3 /app/src/run.py --port=8850"
+    env_file:
+      - .env
+    volumes:
+        - ./logs:/app/src/logs
+    depends_on:
+      db:
+        condition: service_healthy
+    networks:
+      - fitbox
+
+volumes:
+  postgres_data_fitbox:
+
+networks:
+  fitbox:
+    name: fitbox
+    driver: bridge

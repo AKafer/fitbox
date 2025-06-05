@@ -1,7 +1,7 @@
 from fastapi import Depends
 
 from fastapi_users.db import SQLAlchemyBaseUserTableUUID, SQLAlchemyUserDatabase
-from sqlalchemy import String, Boolean, ForeignKey, JSON
+from sqlalchemy import String, Boolean, ForeignKey, JSON, Date
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 from sqlalchemy.sql import expression
@@ -32,8 +32,9 @@ class User(SQLAlchemyBaseUserTableUUID, BaseModel):
     name: Mapped[str] = mapped_column(String(length=320), nullable=False)
     last_name: Mapped[str] = mapped_column(String(length=320), nullable=False)
     father_name: Mapped[str] = mapped_column(String(length=320), nullable=True)
-    telegram_id: Mapped[str] = mapped_column(String(length=320), nullable=True)
-    phone_number: Mapped[str] = mapped_column(String(length=320), nullable=True)
+    phone: Mapped[str] = mapped_column(String(length=320), nullable=True)
+    gender: Mapped[str] = mapped_column(String(length=10), nullable=True, default=None)
+    date_of_birth: Mapped[str] = mapped_column(Date, nullable=True, default=None)
     created_at: Mapped[str] = mapped_column(DateTime(timezone=True), server_default=utcnow(), nullable=False)
     updated_at: Mapped[str] = mapped_column(DateTime(timezone=True), onupdate=utcnow(), nullable=True)
     is_active: Mapped[bool] = mapped_column(Boolean, default=True, nullable=False)
