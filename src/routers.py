@@ -1,12 +1,14 @@
+import logging
+
 from fastapi import APIRouter, Depends, HTTPException, Request, Response
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from starlette import status
 
-from database.models import User
 from main_schemas import ResponseErrorBody
 
 from web.users.routers import router as users_router
 from web.users.schemas import UserRead, UserCreate
+from web.slots.routers import router as slots_router
 from web.users.users import (
     auth_backend,
     current_superuser,
@@ -16,6 +18,9 @@ from web.users.users import (
     get_jwt_strategy,
     ACCESS_TTL, fastapi_users
 )
+
+
+logger = logging.getLogger("control")
 
 
 api_v1_router = APIRouter(
@@ -40,20 +45,27 @@ api_v1_router.include_router(
     fastapi_users.get_register_router(UserRead, UserCreate),
     prefix='/auth',
     tags=['auth'],
-    dependencies=[Depends(current_superuser)],
+)
+
+api_v1_router.include_router(
+    fastapi_users.get_reset_password_router(),
+    prefix="/auth",
+    tags=["auth"],
 )
 
 bearer_refresh = HTTPBearer(auto_error=False)
 
+refresh_router = APIRouter(prefix='/auth', tags=['auth'])
 
-@api_v1_router.post("/auth/jwt/refresh", summary="Обновить пару JWT")
+
+@refresh_router.post("/auth/jwt/refresh", summary="Renew JWT")
 async def refresh_tokens(
     request: Request,
     response: Response,
     creds: HTTPAuthorizationCredentials = Depends(bearer_refresh),
     user_manager: UserManager = Depends(get_user_manager),
 ):
-    print("***REFRESH TOKENS***")
+    logger.info("***REFRESH TOKEN***")
 
     token = request.cookies.get("refresh_token")
     if token is None:
@@ -69,4 +81,6 @@ async def refresh_tokens(
         "token_type":  "bearer",
     }
 
+api_v1_router.include_router(refresh_router)
 api_v1_router.include_router(users_router)
+api_v1_router.include_router(slots_router)

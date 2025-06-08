@@ -184,6 +184,7 @@ async def update_user(
             user_update, user, safe=False, request=request
         )
         await db_session.refresh(user)
+        user.age = calc_age(user.date_of_birth, date.today())
         return schemas.model_validate(UserRead, user)
     except exceptions.InvalidPasswordException as e:
         raise HTTPException(

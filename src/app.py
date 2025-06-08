@@ -18,7 +18,8 @@ origins = [
     "http://0.0.0.0:3000",
     "http://localhost:4000",
     "http://localhost:8500",
-    "https://ins-front.ddns.net",
+    "https://fitbox.bounceme.net",
+    "https://683da30323fc1d0008f313d3--sunny-bonbon-2effb7.netlify.app"
 ]
 
 
