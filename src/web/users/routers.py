@@ -103,6 +103,7 @@ async def me(
     request: Request,
     user: models.UP = Depends(current_active_user),
 ):
+    user.age = calc_age(user.date_of_birth, date.today())
     return schemas.model_validate(UserRead, user)
 
 

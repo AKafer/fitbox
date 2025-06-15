@@ -23,8 +23,7 @@ class Slot(BaseModel):
     free_places: int | None = 0
     bookings: list[Booking]
 
-    class Config:
-        orm_mode = True
+    model_config = {"from_attributes": True}
 
 
 class SlotCreateInput(BaseModel):

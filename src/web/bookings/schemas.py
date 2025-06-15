@@ -11,8 +11,7 @@ class Booking(BaseModel):
     user_id: uuid.UUID
     slot_id: int
 
-    class Config:
-        orm_mode = True
+    model_config = {"from_attributes": True}
 
 
 class BookingCreateInput(BaseModel):
