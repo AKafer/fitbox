@@ -32,6 +32,10 @@ class SlotCreateInput(BaseModel):
     number_of_places: int
 
 
+class BulkSlotCreateInput(BaseModel):
+    slots: list[SlotCreateInput]
+
+
 class SlotUpdateInput(BaseModel):
     type: str | None = None
     time: datetime | None = None

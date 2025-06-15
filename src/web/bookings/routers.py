@@ -10,7 +10,7 @@ from dependencies import get_db_session
 from starlette.exceptions import HTTPException
 
 from main_schemas import ResponseErrorBody
-from web.bookings.schemas import Booking, BookingCreateInput
+from web.bookings.schemas import Booking, BookingCreateInput, BookingCreateByAdminInput
 from web.bookings.services import check_before_create, NotFoundSlotError, DuplicateBookingError, ExcessiveBookingError
 from web.users.users import current_superuser, current_user
 
@@ -46,7 +46,7 @@ async def get_all_bookings(
     },
     dependencies=[Depends(current_user)]
 )
-async def create_booking(
+async def create_user_booking(
     booking_input: BookingCreateInput,
     db_session: AsyncSession = Depends(get_db_session),
     user: User = Depends(current_user)
@@ -70,6 +70,55 @@ async def create_booking(
     try:
         db_booking = Bookings(**booking_input.model_dump())
         db_booking.user_id = user.id
+        db_session.add(db_booking)
+        await db_session.commit()
+        await db_session.refresh(db_booking)
+        return db_booking
+    except sqlalchemy.exc.IntegrityError as e:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f'Some error while creating new Booking: {e}',
+        )
+
+
+@router.post(
+    '/by-admin',
+    response_model=Booking,
+    status_code=status.HTTP_201_CREATED,
+    responses={
+        status.HTTP_400_BAD_REQUEST: {
+            'model': ResponseErrorBody,
+        },
+        status.HTTP_404_NOT_FOUND: {
+            'model': ResponseErrorBody,
+        },
+    },
+    dependencies=[Depends(current_superuser)]
+)
+async def create_admin_booking(
+    booking_input: BookingCreateByAdminInput,
+    db_session: AsyncSession = Depends(get_db_session),
+):
+    query = select(User).filter(User.id == booking_input.user_id)
+    user = await db_session.scalar(query)
+    if user.is_superuser:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f'Superuser cannot create bookings',
+        )
+    try:
+        await check_before_create(booking_input.slot_id, user,  db_session)
+    except (
+        NotFoundSlotError,
+        DuplicateBookingError,
+        ExcessiveBookingError
+    ) as e:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f'Can not create new Booking: {e}',
+        )
+    try:
+        db_booking = Bookings(**booking_input.model_dump())
         db_session.add(db_booking)
         await db_session.commit()
         await db_session.refresh(db_booking)

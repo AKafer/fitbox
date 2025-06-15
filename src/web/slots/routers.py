@@ -15,7 +15,7 @@ from web.slots.filters import SlotsFilter
 from web.slots.schemas import (
     Slot,
     SlotCreateInput,
-    SlotUpdateInput,
+    SlotUpdateInput, BulkSlotCreateInput,
 )
 from web.slots.services import update_slot_in_db, calculate_free_places
 from web.users.users import current_superuser, current_user
@@ -93,12 +93,48 @@ async def create_slot(
     db_session: AsyncSession = Depends(get_db_session),
 ):
     try:
-        db_slot = Slots(**slot_input.dict())
+        db_slot = Slots(**slot_input.model_dump())
         db_session.add(db_slot)
         await db_session.commit()
         await db_session.refresh(db_slot)
         db_slot.free_places = await calculate_free_places(db_slot, db_session)
         return db_slot
+    except sqlalchemy.exc.IntegrityError as e:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f'Slot with this title already exists: {e}',
+        )
+
+
+@router.post(
+    '/bulk',
+    response_model=list[Slot],
+    status_code=status.HTTP_201_CREATED,
+    responses={
+        status.HTTP_400_BAD_REQUEST: {
+            'model': ResponseErrorBody,
+        },
+        status.HTTP_404_NOT_FOUND: {
+            'model': ResponseErrorBody,
+        },
+    },
+    dependencies=[Depends(current_superuser)]
+)
+async def bulk_create_slot(
+    bulk_slot_input: BulkSlotCreateInput,
+    db_session: AsyncSession = Depends(get_db_session),
+):
+    try:
+        slots: list[Slots] = []
+        for slot_input in bulk_slot_input.slots:
+            db_slot = Slots(**slot_input.model_dump())
+            db_session.add(db_slot)
+            slots.append(db_slot)
+        await db_session.commit()
+        for db_slot in slots:
+            await db_session.refresh(db_slot)
+            db_slot.free_places = await calculate_free_places(db_slot, db_session)
+        return slots
     except sqlalchemy.exc.IntegrityError as e:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,

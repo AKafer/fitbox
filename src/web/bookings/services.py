@@ -27,7 +27,7 @@ async def check_before_create(
     exists_user_bookings = result.scalars().all()
     for booking in exists_user_bookings:
         if booking.slot_id == slot_id:
-            raise DuplicateBookingError('You already have a booking for this slot.')
+            raise DuplicateBookingError('Already exist booking for this user in this slot.')
     query = select(Bookings).filter(Bookings.slot_id == slot_id)
     result = await db_session.execute(query)
     exists_slot_bookings = result.scalars().all()

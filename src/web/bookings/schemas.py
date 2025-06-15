@@ -18,3 +18,10 @@ class BookingCreateInput(BaseModel):
     created_at: datetime
     slot_id: int
     source_record: str | None = None
+
+
+class BookingCreateByAdminInput(BaseModel):
+    user_id: uuid.UUID
+    created_at: datetime
+    slot_id: int
+    source_record: str | None = None
