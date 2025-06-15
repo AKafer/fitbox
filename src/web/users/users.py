@@ -196,8 +196,18 @@ class UserManager(UUIDIDMixin, BaseUserManager[User, uuid.UUID]):
 
         return user
 
+    async def on_after_forgot_password(
+            self, user: models.UP, token: str, request: Optional[Request] = None
+    ) -> None:
+        print('AAAAAAAAAAAAAAAAAA')
+        print(f'***token***: {token}')
+        logger.debug(f'***token***: {token}')
 
-async def get_user_manager(
+
+
+
+async def \
+        get_user_manager(
     user_db: SQLAlchemyUserDatabase = Depends(get_user_db),
 ):
     yield UserManager(user_db)

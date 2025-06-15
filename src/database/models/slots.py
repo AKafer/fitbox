@@ -12,3 +12,11 @@ class Slots(BaseModel):
     time = sa.Column(sa.DateTime(timezone=True), nullable=False)
     number_of_places = sa.Column(sa.Integer, nullable=False, default=0)
     free_places = sa.Column(sa.Integer, nullable=False, default=0)
+
+    bookings = relationship(
+        "Bookings",
+        back_populates="slot",
+        lazy='selectin',
+        cascade="all, delete, delete-orphan",
+        single_parent=True,
+    )

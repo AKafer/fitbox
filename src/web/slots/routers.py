@@ -1,37 +1,46 @@
 import sqlalchemy
 from fastapi import APIRouter, Depends
+from fastapi_filter import FilterDepends
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 from starlette import status
 from starlette.responses import Response
 
-from database.models import Slots
+from database.models import Slots, User
 from dependencies import get_db_session
 from starlette.exceptions import HTTPException
 
 from main_schemas import ResponseErrorBody
+from web.slots.filters import SlotsFilter
 from web.slots.schemas import (
     Slot,
     SlotCreateInput,
     SlotUpdateInput,
 )
-from web.slots.services import update_slot_in_db
-from web.users.users import current_superuser
+from web.slots.services import update_slot_in_db, calculate_free_places
+from web.users.users import current_superuser, current_user
 
 router = APIRouter(
     prefix='/slots',
     tags=['slots'],
-    dependencies=[Depends(current_superuser)],
 )
 
 
-@router.get('/', response_model=list[Slot])
+@router.get('/', response_model=list[Slot], dependencies=[Depends(current_user)],)
 async def get_all_slots(
+    slots_filter: SlotsFilter = FilterDepends(SlotsFilter),
     db_session: AsyncSession = Depends(get_db_session),
+    user: User = Depends(current_user)
 ):
     query = select(Slots).order_by(Slots.id.desc())
-    slots = await db_session.execute(query)
-    return slots.scalars().all()
+    query = slots_filter.filter(query)
+    result = await db_session.execute(query)
+    slots = result.scalars().all()
+    for slot in slots:
+        slot.free_places = await calculate_free_places(slot, db_session)
+        if not user.is_superuser:
+            slot.bookings = []
+    return slots
 
 
 @router.get(
@@ -45,9 +54,12 @@ async def get_all_slots(
             'model': ResponseErrorBody,
         },
     },
+    dependencies=[Depends(current_user)]
 )
 async def get_slot_by_id(
-    slot_id: int, db_session: AsyncSession = Depends(get_db_session)
+    slot_id: int,
+    db_session: AsyncSession = Depends(get_db_session),
+    user: User = Depends(current_user)
 ):
     query = select(Slots).filter(Slots.id == slot_id)
     slot = await db_session.scalar(query)
@@ -56,6 +68,9 @@ async def get_slot_by_id(
             status_code=status.HTTP_404_NOT_FOUND,
             detail=f'Slot with id {slot_id} not found',
         )
+    slot.free_places = await calculate_free_places(slot, db_session)
+    if not user.is_superuser:
+        slot.bookings = []
     return slot
 
 
@@ -71,6 +86,7 @@ async def get_slot_by_id(
             'model': ResponseErrorBody,
         },
     },
+    dependencies=[Depends(current_superuser)]
 )
 async def create_slot(
     slot_input: SlotCreateInput,
@@ -81,6 +97,7 @@ async def create_slot(
         db_session.add(db_slot)
         await db_session.commit()
         await db_session.refresh(db_slot)
+        db_slot.free_places = await calculate_free_places(db_slot, db_session)
         return db_slot
     except sqlalchemy.exc.IntegrityError as e:
         raise HTTPException(
@@ -100,6 +117,7 @@ async def create_slot(
             'model': ResponseErrorBody,
         },
     },
+    dependencies=[Depends(current_superuser)]
 )
 async def update_slot(
     slot_id: int,
@@ -114,9 +132,11 @@ async def update_slot(
             detail=f'Slot with id {slot_id} not found',
         )
     try:
-        return await update_slot_in_db(
+         slot_db = await update_slot_in_db(
             db_session, slot, **update_input.dict(exclude_none=True)
         )
+         slot_db.free_places = await calculate_free_places(slot_db, db_session)
+         return slot_db
     except sqlalchemy.exc.IntegrityError as e:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
@@ -132,6 +152,7 @@ async def update_slot(
             'model': ResponseErrorBody,
         },
     },
+    dependencies=[Depends(current_superuser)]
 )
 async def delete_slot(
     slot_id: int,

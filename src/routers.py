@@ -9,6 +9,7 @@ from main_schemas import ResponseErrorBody
 from web.users.routers import router as users_router
 from web.users.schemas import UserRead, UserCreate
 from web.slots.routers import router as slots_router
+from web.bookings.routers import router as bookings_router
 from web.users.users import (
     auth_backend,
     current_superuser,
@@ -53,6 +54,12 @@ api_v1_router.include_router(
     tags=["auth"],
 )
 
+api_v1_router.include_router(
+    fastapi_users.get_verify_router(UserRead),
+    prefix="/auth",
+    tags=["auth"],
+)
+
 bearer_refresh = HTTPBearer(auto_error=False)
 
 refresh_router = APIRouter(prefix='/auth', tags=['auth'])
@@ -84,3 +91,4 @@ async def refresh_tokens(
 api_v1_router.include_router(refresh_router)
 api_v1_router.include_router(users_router)
 api_v1_router.include_router(slots_router)
+api_v1_router.include_router(bookings_router)

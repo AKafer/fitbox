@@ -1,6 +1,18 @@
+import uuid
 from datetime import datetime
 
 from pydantic import BaseModel
+
+
+class Booking(BaseModel):
+    id: int
+    created_at: datetime
+    source_record: str | None = None
+    user_id: uuid.UUID
+    slot_id: int
+
+    class Config:
+        orm_mode = True
 
 
 class Slot(BaseModel):
@@ -9,6 +21,7 @@ class Slot(BaseModel):
     time: datetime
     number_of_places: int
     free_places: int | None = 0
+    bookings: list[Booking]
 
     class Config:
         orm_mode = True
