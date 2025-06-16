@@ -10,6 +10,7 @@ from web.users.routers import router as users_router
 from web.users.schemas import UserRead, UserCreate
 from web.slots.routers import router as slots_router
 from web.bookings.routers import router as bookings_router
+from web.records.routers import router as records_router
 from web.users.users import (
     auth_backend,
     current_superuser,
@@ -92,3 +93,4 @@ api_v1_router.include_router(refresh_router)
 api_v1_router.include_router(users_router)
 api_v1_router.include_router(slots_router)
 api_v1_router.include_router(bookings_router)
+api_v1_router.include_router(records_router)

@@ -15,6 +15,14 @@ class Booking(BaseModel):
     model_config = {"from_attributes": True}
 
 
+class Record(BaseModel):
+    id: int
+    date: date
+    weight: float
+
+    model_config = {"from_attributes": True}
+
+
 class UserRead(schemas.BaseUser[uuid.UUID]):
     email: EmailStr
     name: str
@@ -30,7 +38,8 @@ class UserRead(schemas.BaseUser[uuid.UUID]):
     status: str | None = None
     score: float | None = 0.0
     count_trainings: int | None = 0
-    bookings: list[Booking]
+    bookings: list[Booking] | None = []
+    records: list[Record] | None = []
     is_active: bool = Field(True, exclude=True)
     is_verified: bool = Field(False, exclude=True)
     is_superuser: bool = Field(False, exclude=True)
