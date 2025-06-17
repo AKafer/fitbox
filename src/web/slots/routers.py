@@ -169,7 +169,7 @@ async def update_slot(
         )
     try:
          slot_db = await update_slot_in_db(
-            db_session, slot, **update_input.dict(exclude_none=True)
+            db_session, slot, **update_input.model_dump(exclude_none=True)
         )
          slot_db.free_places = await calculate_free_places(slot_db, db_session)
          return slot_db

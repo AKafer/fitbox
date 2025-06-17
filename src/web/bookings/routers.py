@@ -10,8 +10,9 @@ from dependencies import get_db_session
 from starlette.exceptions import HTTPException
 
 from main_schemas import ResponseErrorBody
-from web.bookings.schemas import Booking, BookingCreateInput, BookingCreateByAdminInput
-from web.bookings.services import check_before_create, NotFoundSlotError, DuplicateBookingError, ExcessiveBookingError
+from web.bookings.schemas import Booking, BookingCreateInput, BookingCreateByAdminInput, BookingUpdateInput
+from web.bookings.services import check_before_create, NotFoundSlotError, DuplicateBookingError, ExcessiveBookingError, \
+    update_booking_in_db
 from web.users.users import current_superuser, current_user
 
 router = APIRouter(
@@ -127,6 +128,47 @@ async def create_admin_booking(
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail=f'Some error while creating new Booking: {e}',
+        )
+
+
+@router.patch(
+    '/{booking_id:int}',
+    response_model=Booking,
+    status_code=status.HTTP_200_OK,
+    responses={
+        status.HTTP_400_BAD_REQUEST: {
+            'model': ResponseErrorBody,
+        },
+        status.HTTP_404_NOT_FOUND: {
+            'model': ResponseErrorBody,
+        },
+    },
+    dependencies=[Depends(current_superuser)]
+)
+async def update_booking(
+    booking_id: int,
+    update_input: BookingUpdateInput,
+    db_session: AsyncSession = Depends(get_db_session),
+):
+    query = select(Bookings).filter(Bookings.id == booking_id)
+    booking = await db_session.scalar(query)
+    if booking is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f'Booking with id {booking_id} not found',
+        )
+    try:
+        booking_db = await update_booking_in_db(
+            db_session, booking, **update_input.model_dump(exclude_none=True)
+        )
+
+        await db_session.commit()
+        await db_session.refresh(booking_db)
+        return booking_db
+    except sqlalchemy.exc.IntegrityError as e:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f'Some error while updating Booking: {e}',
         )
 
 

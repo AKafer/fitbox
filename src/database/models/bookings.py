@@ -18,6 +18,15 @@ class Bookings(BaseModel):
         sa.ForeignKey("slots.id", ondelete="CASCADE"),
         nullable=False
     )
+    is_done = sa.Column(sa.Boolean, default=False, nullable=False)
+    power = sa.Column(sa.Float, nullable=True)
+    energy = sa.Column(sa.Float, nullable=True)
+    tempo = sa.Column(sa.Float, nullable=True)
+
+
+    __table_args__ = (
+        sa.UniqueConstraint('user_id', 'slot_id', name='uix_user_slot'),
+    )
 
     user = relationship(
         "User",

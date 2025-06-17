@@ -35,4 +35,13 @@ async def check_before_create(
         raise ExcessiveBookingError('This slot is already fully booked.')
 
 
-
+async def update_booking_in_db(
+        db_session: AsyncSession,
+        booking: Bookings,
+        **update_data: dict
+) -> Bookings:
+    for field, value in update_data.items():
+        setattr(booking, field, value)
+    await db_session.commit()
+    await db_session.refresh(booking)
+    return booking
