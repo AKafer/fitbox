@@ -1,5 +1,6 @@
 import sqlalchemy
 from fastapi import APIRouter, Depends
+from fastapi_filter import FilterDepends
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 from starlette import status
@@ -10,6 +11,7 @@ from dependencies import get_db_session
 from starlette.exceptions import HTTPException
 
 from main_schemas import ResponseErrorBody
+from web.bookings.filters import BookingsFilter
 from web.bookings.schemas import Booking, BookingCreateInput, BookingCreateByAdminInput, BookingUpdateInput
 from web.bookings.services import check_before_create, NotFoundSlotError, DuplicateBookingError, ExcessiveBookingError, \
     update_booking_in_db
@@ -27,8 +29,10 @@ router = APIRouter(
 )
 async def get_all_bookings(
     db_session: AsyncSession = Depends(get_db_session),
+    booking_filter: BookingsFilter = FilterDepends(BookingsFilter),
 ):
     query = select(Bookings).order_by(Bookings.id.desc())
+    query = booking_filter.filter(query)
     bookings = await db_session.execute(query)
     return bookings.scalars().all()
 

@@ -17,7 +17,7 @@ from web.slots.schemas import (
     SlotCreateInput,
     SlotUpdateInput, BulkSlotCreateInput,
 )
-from web.slots.services import update_slot_in_db, calculate_free_places
+from web.slots.services import update_slot_in_db, calculate_free_places, check_bookings, ExistingBookingsError
 from web.users.users import current_superuser, current_user
 
 router = APIRouter(
@@ -200,6 +200,13 @@ async def delete_slot(
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail=f'Slot with id {slot_id} not found',
+        )
+    try:
+        await check_bookings(slot, db_session)
+    except ExistingBookingsError as e:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f'{e}',
         )
     await db_session.delete(slot)
     await db_session.commit()

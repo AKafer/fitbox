@@ -9,7 +9,6 @@ class Booking(BaseModel):
     created_at: datetime
     source_record: str | None = None
     user_id: uuid.UUID
-    slot_id: int
 
     class Config:
         orm_mode = True

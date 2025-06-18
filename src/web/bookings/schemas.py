@@ -4,6 +4,17 @@ from datetime import datetime
 from pydantic import BaseModel
 
 
+class Slot(BaseModel):
+    id: int
+    type: str | None
+    time: datetime
+    number_of_places: int
+    free_places: int | None = 0
+
+    model_config = {"from_attributes": True}
+
+
+
 class Booking(BaseModel):
     id: int
     created_at: datetime
@@ -14,6 +25,7 @@ class Booking(BaseModel):
     power: float | None = None
     energy: float | None = None
     tempo: float | None = None
+    slot: Slot | None = None
 
 
     model_config = {"from_attributes": True}
