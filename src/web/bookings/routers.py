@@ -161,15 +161,28 @@ async def update_booking(
             status_code=status.HTTP_404_NOT_FOUND,
             detail=f'Booking with id {booking_id} not found',
         )
+    query = select(User).filter(User.id == booking.user_id)
+    user = await db_session.scalar(query)
     try:
+        if all([
+            hasattr(update_input, 'is_done'),
+            update_input.is_done,
+            booking.is_done is not True,
+        ]):
+            if user.count_trainings is None:
+                user.count_trainings = 0
+            elif user.count_trainings < 1:
+                user.count_trainings = 0
+            else:
+                user.count_trainings -= 1
         booking_db = await update_booking_in_db(
             db_session, booking, **update_input.model_dump(exclude_none=True)
         )
-
         await db_session.commit()
         await db_session.refresh(booking_db)
         return booking_db
     except sqlalchemy.exc.IntegrityError as e:
+        await db_session.rollback()
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail=f'Some error while updating Booking: {e}',

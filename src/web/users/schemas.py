@@ -5,6 +5,15 @@ from fastapi_users import schemas
 from pydantic import EmailStr, Field, BaseModel, Extra
 
 
+class Transaction(BaseModel):
+    id: int
+    created_at: datetime
+    count: int
+    payment_method: str | None = None
+
+    model_config = {"from_attributes": True}
+
+
 class Slot(BaseModel):
     id: int
     type: str | None
@@ -17,7 +26,6 @@ class Booking(BaseModel):
     id: int
     created_at: datetime
     source_record: str | None = None
-    user_id: uuid.UUID
     slot_id: int
     is_done: bool = False
     power: float | None = None
@@ -47,12 +55,13 @@ class UserRead(schemas.BaseUser[uuid.UUID]):
     created_at: datetime
     updated_at: datetime | None
     age: int | None = 0
-    balance_training: float | None = 0.0
     status: str | None = None
     score: float | None = 0.0
     count_trainings: int | None = 0
     bookings: list[Booking] | None = []
     records: list[Record] | None = []
+    transactions: list[Transaction] | None = []
+
     is_active: bool = Field(True, exclude=True)
     is_verified: bool = Field(False, exclude=True)
     is_superuser: bool = Field(False, exclude=True)
@@ -95,7 +104,6 @@ class UserListRead(schemas.BaseUser[uuid.UUID]):
     gender: str | None = None
     date_of_birth: date | None
     age: int | None = 0
-    balance_training: float | None = 0.0
     status: str | None = None
     score: float | None = 0.0
     count_trainings: int | None = 0
