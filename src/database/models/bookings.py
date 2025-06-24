@@ -18,6 +18,7 @@ class Bookings(BaseModel):
         sa.ForeignKey("slots.id", ondelete="CASCADE"),
         nullable=False
     )
+    sensor_id = sa.Column(sa.String(128), nullable=True)
     is_done = sa.Column(sa.Boolean, default=False, nullable=False)
     power = sa.Column(sa.Float, nullable=True)
     energy = sa.Column(sa.Float, nullable=True)
@@ -41,5 +42,3 @@ class Bookings(BaseModel):
         lazy='selectin',
         passive_deletes=True
     )
-
-

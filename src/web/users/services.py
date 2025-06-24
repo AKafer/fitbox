@@ -1,5 +1,8 @@
 from datetime import date
 
+import constants
+from database.models import User
+
 
 def calc_age(born: date, today: date | None = None) -> int | None:
     if born is None:
@@ -12,3 +15,25 @@ def calc_age(born: date, today: date | None = None) -> int | None:
     if (today.month, today.day) < (born.month, born.day):
         years -= 1
     return years
+
+
+def calc_count_booking_info(user: User) -> (int, str):
+    trainings_count, energy = 0, 0
+    for booking in user.bookings:
+        if hasattr(booking, 'is_done') and booking.is_done:
+            trainings_count += 1
+            if hasattr(booking, 'energy'):
+                energy += booking.energy
+    status = ''
+    for installed_status, level in constants.status_levels.items():
+        if energy >= level:
+            status = installed_status
+        else:
+            break
+    return trainings_count, status
+
+
+def calc_score(user: User) -> int:
+    if user.score is None:
+        return 0
+    return user.score

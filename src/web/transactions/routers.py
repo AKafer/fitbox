@@ -72,10 +72,10 @@ async def create_user_transaction(
         db_transaction = Transactions(**transaction_input.model_dump())
         db_transaction.user_id = user.id
         db_session.add(db_transaction)
-        if user.count_trainings is not None:
-            user.count_trainings += transaction_input.count
+        if user.score is not None:
+            user.score += transaction_input.count
         else:
-            user.count_trainings = transaction_input.count
+            user.score = transaction_input.count
         await db_session.commit()
         await db_session.refresh(db_transaction)
         return db_transaction
@@ -122,10 +122,10 @@ async def create_admin_transaction(
     try:
         db_transaction = Transactions(**transaction_input.model_dump())
         db_session.add(db_transaction)
-        if user.count_trainings is not None:
-            user.count_trainings += transaction_input.count
+        if user.score is not None:
+            user.score += transaction_input.count
         else:
-            user.count_trainings = transaction_input.count
+            user.score = transaction_input.count
         await db_session.commit()
         await db_session.refresh(db_transaction)
         return db_transaction
@@ -173,7 +173,7 @@ async def delete_transaction(
                 detail='You do not have permission to delete this transaction',
             )
     try:
-        user_tr.count_trainings -= transaction.count
+        user_tr.score -= transaction.count
         await db_session.delete(transaction)
         await db_session.commit()
     except sqlalchemy.exc.IntegrityError as e:

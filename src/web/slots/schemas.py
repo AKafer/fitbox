@@ -21,6 +21,7 @@ class Slot(BaseModel):
     number_of_places: int
     free_places: int | None = 0
     bookings: list[Booking]
+    bindings: dict[str, str] | None = None
 
     model_config = {"from_attributes": True}
 
@@ -39,3 +40,14 @@ class SlotUpdateInput(BaseModel):
     type: str | None = None
     time: datetime | None = None
     number_of_places: int | None = None
+    bindings: dict[str, str] | None = None
+
+
+class Binding(BaseModel):
+    user_id: uuid.UUID
+    sensor_id: str
+
+
+class BindInput(BaseModel):
+    slot_id: int
+    bindings: list[Binding]

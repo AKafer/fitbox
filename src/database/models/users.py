@@ -41,7 +41,7 @@ class User(SQLAlchemyBaseUserTableUUID, BaseModel):
     date_of_birth: Mapped[str] = mapped_column(
         Date, nullable=True, default=None
     )
-    count_trainings: Mapped[int] = mapped_column(
+    score: Mapped[int] = mapped_column(
         Integer, nullable=True, default=0
     )
     created_at: Mapped[str] = mapped_column(

@@ -15,6 +15,7 @@ class Transactions(BaseModel):
     )
     count = sa.Column(sa.Integer, nullable=False)
     payment_method = sa.Column(sa.String(128), nullable=True)
+    money_amount = sa.Column(sa.Numeric(10, 2), nullable=True)
 
 
     user = relationship(

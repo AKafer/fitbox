@@ -169,12 +169,12 @@ async def update_booking(
             update_input.is_done,
             booking.is_done is not True,
         ]):
-            if user.count_trainings is None:
-                user.count_trainings = 0
-            elif user.count_trainings < 1:
-                user.count_trainings = 0
+            if user.score is None:
+                user.score = 0
+            elif user.score < 1:
+                user.score = 0
             else:
-                user.count_trainings -= 1
+                user.score -= 1
         booking_db = await update_booking_in_db(
             db_session, booking, **update_input.model_dump(exclude_none=True)
         )

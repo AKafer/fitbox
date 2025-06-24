@@ -10,6 +10,7 @@ class Transaction(BaseModel):
     created_at: datetime
     count: int
     payment_method: str | None = None
+    money_amount: float | None = 0.0
 
     model_config = {"from_attributes": True}
 
@@ -56,7 +57,7 @@ class UserRead(schemas.BaseUser[uuid.UUID]):
     updated_at: datetime | None
     age: int | None = 0
     status: str | None = None
-    score: float | None = 0.0
+    score: int | None = 0
     count_trainings: int | None = 0
     bookings: list[Booking] | None = []
     records: list[Record] | None = []
@@ -105,7 +106,7 @@ class UserListRead(schemas.BaseUser[uuid.UUID]):
     date_of_birth: date | None
     age: int | None = 0
     status: str | None = None
-    score: float | None = 0.0
+    score: int | None = 0
     count_trainings: int | None = 0
     is_active: bool = Field(True, exclude=True)
     is_verified: bool = Field(False, exclude=True)

@@ -17,6 +17,7 @@ from fastapi_users.manager import BaseUserManager
 from fastapi_users.router.common import ErrorCode, ErrorModel
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.orm import selectinload
 
 from database.models import User
 from dependencies import get_db_session
@@ -26,7 +27,7 @@ from web.users.schemas import (
     UserUpdate,
     UserListRead
 )
-from web.users.services import calc_age
+from web.users.services import calc_age, calc_score, calc_count_booking_info
 from web.users.users import (
     current_active_user,
     current_superuser,
@@ -48,12 +49,15 @@ async def get_all_users(
     query = (
         select(User)
         .where(User.is_superuser == False)
+        .options(selectinload(User.bookings))
     )
     query = user_filter.filter(query)
     result = await db_session.execute(query)
     users = result.scalars().unique().all()
     for user in users:
         user.age = calc_age(user.date_of_birth, date.today())
+        user.count_trainings, user.status = calc_count_booking_info(user)
+        user.score = calc_score(user)
     return users
 
 
@@ -66,11 +70,17 @@ async def get_paginated_users(
     user_filter: UsersFilter = Depends(UsersFilter),
     db_session: AsyncSession = Depends(get_db_session),
 ):
-    query = select(User).where(User.is_superuser == False)
+    query = (
+        select(User)
+        .where(User.is_superuser == False)
+        .options(selectinload(User.bookings))
+    )
     query = user_filter.filter(query)
     page = await paginate(db_session, query)
     for user in page.items:
         user.age = calc_age(user.date_of_birth, date.today())
+        user.count_trainings, user.status = calc_count_booking_info(user)
+        user.score = calc_score(user)
     return page
 
 
@@ -104,6 +114,8 @@ async def me(
     user: models.UP = Depends(current_active_user),
 ):
     user.age = calc_age(user.date_of_birth, date.today())
+    user.count_trainings, user.status = calc_count_booking_info(user)
+    user.score = calc_score(user)
     return schemas.model_validate(UserRead, user)
 
 
@@ -126,6 +138,8 @@ async def me(
 )
 async def get_user(user=Depends(get_user_or_404)):
     user.age = calc_age(user.date_of_birth, date.today())
+    user.count_trainings, user.status = calc_count_booking_info(user)
+    user.score = calc_score(user)
     return schemas.model_validate(UserRead, user)
 
 
@@ -186,6 +200,8 @@ async def update_user(
         )
         await db_session.refresh(user)
         user.age = calc_age(user.date_of_birth, date.today())
+        user.count_trainings, user.status = calc_count_booking_info(user)
+        user.score = calc_score(user)
         return schemas.model_validate(UserRead, user)
     except exceptions.InvalidPasswordException as e:
         raise HTTPException(

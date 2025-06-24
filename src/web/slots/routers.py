@@ -15,9 +15,11 @@ from web.slots.filters import SlotsFilter
 from web.slots.schemas import (
     Slot,
     SlotCreateInput,
-    SlotUpdateInput, BulkSlotCreateInput,
+    SlotUpdateInput,
+    BulkSlotCreateInput, BindInput,
 )
-from web.slots.services import update_slot_in_db, calculate_free_places, check_bookings, ExistingBookingsError
+from web.slots.services import update_slot_in_db, calculate_free_places, check_bookings, ExistingBookingsError, \
+    check_complete_bindings, BindingsError
 from web.users.users import current_superuser, current_user
 
 router = APIRouter(
@@ -40,6 +42,7 @@ async def get_all_slots(
         slot.free_places = await calculate_free_places(slot, db_session)
         if not user.is_superuser:
             slot.bookings = []
+            slot.bindings = None
     return slots
 
 
@@ -71,6 +74,7 @@ async def get_slot_by_id(
     slot.free_places = await calculate_free_places(slot, db_session)
     if not user.is_superuser:
         slot.bookings = []
+        slot.bindings = None
     return slot
 
 
@@ -103,6 +107,43 @@ async def create_slot(
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail=f'Slot with this title already exists: {e}',
+        )
+
+
+@router.post(
+    '/binding',
+    response_model=dict,
+    status_code=status.HTTP_200_OK,
+    responses={
+        status.HTTP_400_BAD_REQUEST: {
+            'model': ResponseErrorBody,
+        },
+        status.HTTP_404_NOT_FOUND: {
+            'model': ResponseErrorBody,
+        },
+    },
+    dependencies=[Depends(current_superuser)]
+)
+async def save_bindings(
+    bind_input: BindInput,
+    db_session: AsyncSession = Depends(get_db_session),
+):
+    query = select(Slots).where(Slots.id == bind_input.slot_id)
+    slot = await db_session.scalar(query)
+    if slot is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f'Slot with id {bind_input.slot_id} not found',
+        )
+    try:
+        result = await check_complete_bindings(bind_input, db_session)
+        slot.bindings = {str(b.user_id): b.sensor_id for b in bind_input.bindings}
+        await db_session.commit()
+        return result
+    except (sqlalchemy.exc.IntegrityError, BindingsError) as e:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f'Error while making binding: {e}',
         )
 
 

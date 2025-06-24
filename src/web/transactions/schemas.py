@@ -10,6 +10,7 @@ class Transaction(BaseModel):
     user_id: uuid.UUID
     count: int
     payment_method: str | None = None
+    money_amount: float | None = 0.0
 
     model_config = {"from_attributes": True}
 
@@ -18,6 +19,7 @@ class TransactionCreateInput(BaseModel):
     created_at: datetime
     count: int
     payment_method: str | None = None
+    money_amount: float | None = 0.0
 
 
 class TransactionCreateByAdminInput(BaseModel):
@@ -25,3 +27,4 @@ class TransactionCreateByAdminInput(BaseModel):
     user_id: uuid.UUID
     count: int
     payment_method: str | None = None
+    money_amount: float | None = 0.0

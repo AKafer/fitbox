@@ -25,7 +25,7 @@ from fastapi_users.db import SQLAlchemyUserDatabase
 from fastapi_users.jwt import decode_jwt, generate_jwt
 from sqlalchemy import func, select
 from web.users.schemas import UserCreate
-from web.users.services import calc_age
+from web.users.services import calc_age, calc_score, calc_count_booking_info
 
 logger = logging.getLogger('control')
 
@@ -93,6 +93,8 @@ class UserManager(UUIDIDMixin, BaseUserManager[User, uuid.UUID]):
     ) -> models.UP:
         user = await super().create(user_create, safe=safe, request=request)
         user.age = calc_age(user.date_of_birth, None)
+        user.count_trainings, user.status = calc_count_booking_info(user)
+        user.score = calc_score(user)
         return user
 
     async def validate_password(
@@ -202,8 +204,6 @@ class UserManager(UUIDIDMixin, BaseUserManager[User, uuid.UUID]):
         print('AAAAAAAAAAAAAAAAAA')
         print(f'***token***: {token}')
         logger.debug(f'***token***: {token}')
-
-
 
 
 async def \
