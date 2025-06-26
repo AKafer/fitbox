@@ -93,7 +93,7 @@ class UserManager(UUIDIDMixin, BaseUserManager[User, uuid.UUID]):
     ) -> models.UP:
         user = await super().create(user_create, safe=safe, request=request)
         user.age = calc_age(user.date_of_birth, None)
-        user.count_trainings, user.status = calc_count_booking_info(user)
+        user.count_trainings, user.energy, user.status = calc_count_booking_info(user)
         user.score = calc_score(user)
         return user
 

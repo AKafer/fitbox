@@ -56,7 +56,7 @@ async def get_all_users(
     users = result.scalars().unique().all()
     for user in users:
         user.age = calc_age(user.date_of_birth, date.today())
-        user.count_trainings, user.status = calc_count_booking_info(user)
+        user.count_trainings, user.energy, user.status = calc_count_booking_info(user)
         user.score = calc_score(user)
     return users
 
@@ -79,7 +79,7 @@ async def get_paginated_users(
     page = await paginate(db_session, query)
     for user in page.items:
         user.age = calc_age(user.date_of_birth, date.today())
-        user.count_trainings, user.status = calc_count_booking_info(user)
+        user.count_trainings, user.energy, user.status = calc_count_booking_info(user)
         user.score = calc_score(user)
     return page
 
@@ -114,7 +114,7 @@ async def me(
     user: models.UP = Depends(current_active_user),
 ):
     user.age = calc_age(user.date_of_birth, date.today())
-    user.count_trainings, user.status = calc_count_booking_info(user)
+    user.count_trainings, user.energy, user.status = calc_count_booking_info(user)
     user.score = calc_score(user)
     return schemas.model_validate(UserRead, user)
 
@@ -138,7 +138,7 @@ async def me(
 )
 async def get_user(user=Depends(get_user_or_404)):
     user.age = calc_age(user.date_of_birth, date.today())
-    user.count_trainings, user.status = calc_count_booking_info(user)
+    user.count_trainings, user.energy, user.status = calc_count_booking_info(user)
     user.score = calc_score(user)
     return schemas.model_validate(UserRead, user)
 
@@ -200,7 +200,7 @@ async def update_user(
         )
         await db_session.refresh(user)
         user.age = calc_age(user.date_of_birth, date.today())
-        user.count_trainings, user.status = calc_count_booking_info(user)
+        user.count_trainings, user.energy, user.status = calc_count_booking_info(user)
         user.score = calc_score(user)
         return schemas.model_validate(UserRead, user)
     except exceptions.InvalidPasswordException as e:

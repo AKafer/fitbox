@@ -26,6 +26,7 @@ class Booking(BaseModel):
     energy: float | None = None
     tempo: float | None = None
     slot: Slot | None = None
+    sensor_id: str | None = None
 
 
     model_config = {"from_attributes": True}

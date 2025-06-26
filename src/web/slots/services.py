@@ -66,6 +66,7 @@ async def check_complete_bindings(
     bookings = await db_session.execute(query)
     for booking in bookings.scalars().all():
         if str(booking.user_id) in bindings:
+            booking.sensor_id = bindings[str(booking.user_id)]
             possible_bindings_count += 1
     return {
         'accepted_bindings': accepted_bindings_count,

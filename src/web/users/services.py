@@ -17,7 +17,7 @@ def calc_age(born: date, today: date | None = None) -> int | None:
     return years
 
 
-def calc_count_booking_info(user: User) -> (int, str):
+def calc_count_booking_info(user: User) -> (int, int, str):
     trainings_count, energy = 0, 0
     for booking in user.bookings:
         if hasattr(booking, 'is_done') and booking.is_done:
@@ -30,7 +30,7 @@ def calc_count_booking_info(user: User) -> (int, str):
             status = installed_status
         else:
             break
-    return trainings_count, status
+    return trainings_count, energy, status
 
 
 def calc_score(user: User) -> int:
