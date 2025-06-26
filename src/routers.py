@@ -12,6 +12,7 @@ from web.slots.routers import router as slots_router
 from web.bookings.routers import router as bookings_router
 from web.records.routers import router as records_router
 from web.transactions.routers import router as transactions_router
+from web.sensors.routers import router as sensors_router
 from web.users.users import (
     auth_backend,
     current_superuser,
@@ -96,3 +97,4 @@ api_v1_router.include_router(slots_router)
 api_v1_router.include_router(bookings_router)
 api_v1_router.include_router(records_router)
 api_v1_router.include_router(transactions_router)
+api_v1_router.include_router(sensors_router)

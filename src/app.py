@@ -1,10 +1,18 @@
-from logging import config as logging_config
+import asyncio
+import logging
 
 from fastapi import FastAPI
 from fastapi_pagination import add_pagination
 from fastapi.middleware.cors import CORSMiddleware
 from starlette.responses import PlainTextResponse
 from routers import api_v1_router
+from gmqtt import Client as MQTTClient
+
+from settings import MQTT_BROKER, MQTT_PORT
+from state import SensorsState
+
+
+logger = logging.getLogger("control")
 
 
 def setup_routes(app: FastAPI):
@@ -43,4 +51,26 @@ def create_app() -> FastAPI:
         allow_methods=["*"],
         allow_headers=["*"],
     )
+
+    @app.on_event('startup')
+    async def _startup() -> None:
+        client = MQTTClient('api-backend')
+        app.state.mqtt = client
+        app.state.sensors = SensorsState()
+
+        async def _connect():
+            try:
+                await asyncio.wait_for(
+                    client.connect(MQTT_BROKER, MQTT_PORT, keepalive=30),
+                    timeout=5,
+                )
+                logger.info("✅ MQTT connected")
+            except (asyncio.TimeoutError, OSError) as e:
+                logger.warning("⚠️  MQTT not connected: %s", e)
+        asyncio.create_task(_connect())
+
+    @app.on_event('shutdown')
+    async def _shutdown() -> None:
+        await app.state.mqtt.disconnect()
+
     return app

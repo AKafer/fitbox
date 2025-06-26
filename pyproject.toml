@@ -17,6 +17,7 @@ dependencies = [
     "uvicorn (>=0.34.3,<0.35.0)",
     "fastapi-pagination[sqlalchemy] (>=0.13.1,<0.14.0)",
     "fastapi-users[sqlalchemy] (>=14.0.1,<15.0.0)",
+    "gmqtt (>=0.7.0,<0.8.0)",
 ]
 
 

@@ -56,7 +56,7 @@ class UserRead(schemas.BaseUser[uuid.UUID]):
     created_at: datetime
     updated_at: datetime | None
     age: int | None = 0
-    energy: int | None = 0
+    energy: float | None = 0
     status: str | None = None
     score: int | None = 0
     count_trainings: int | None = 0
@@ -106,7 +106,7 @@ class UserListRead(schemas.BaseUser[uuid.UUID]):
     gender: str | None = None
     date_of_birth: date | None
     age: int | None = 0
-    energy: int | None = 0
+    energy: float | None = 0
     status: str | None = None
     score: int | None = 0
     count_trainings: int | None = 0
