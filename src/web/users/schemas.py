@@ -91,7 +91,7 @@ class UserUpdate(schemas.BaseUserUpdate):
     father_name: str | None = None
     phone: str | None = None
     gender: str | None = None
-    date_of_birth: date | None
+    date_of_birth: date | None = None
     is_active: bool = Field(True, exclude=True)
     is_verified: bool = Field(False, exclude=True)
     is_superuser: bool = Field(False, exclude=True)
