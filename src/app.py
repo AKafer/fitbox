@@ -22,6 +22,7 @@ def setup_routes(app: FastAPI):
 
 origins = [
     "capacitor://localhost",
+    "192.168.1.121",
     "http://localhost:3000",
     "http://127.0.0.1:3000",
     "http://0.0.0.0:3000",

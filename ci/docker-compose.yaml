@@ -34,10 +34,22 @@ services:
     volumes:
         - ./logs:/app/src/logs
     depends_on:
-      db:
-        condition: service_healthy
+      db: {condition: service_healthy}
+      mosquitto: {condition: service_started}
     networks:
       - fitbox
+
+  mosquitto:
+      container_name: fitbox_mosquitto
+      image: eclipse-mosquitto:2
+      restart: unless-stopped
+      ports:
+        - "1883:1883"
+        - "9001:9001"
+      volumes:
+        - ./mosquitto.conf:/mosquitto/config/mosquitto.conf:ro
+      networks:
+        - fitbox
 
 volumes:
   postgres_data_fitbox:
