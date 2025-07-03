@@ -1,46 +1,48 @@
 import asyncio
 import logging
+import logging.config
 
 from fastapi import FastAPI
-from fastapi_pagination import add_pagination
 from fastapi.middleware.cors import CORSMiddleware
-from starlette.responses import PlainTextResponse
-from routers import api_v1_router
+from fastapi_pagination import add_pagination
 from gmqtt import Client as MQTTClient
-
-from settings import MQTT_BROKER, MQTT_PORT
+from routers import api_v1_router
+from settings import LOGGING, MQTT_BROKER, MQTT_PORT
+from starlette.responses import PlainTextResponse
 from state import SensorsState
 
+logging.config.dictConfig(LOGGING)
 
-logger = logging.getLogger("control")
+
+logger = logging.getLogger('control')
 
 
 def setup_routes(app: FastAPI):
     app.include_router(api_v1_router)
-    app.add_route("/ping/", lambda _request: PlainTextResponse('pong'))
+    app.add_route('/ping/', lambda _request: PlainTextResponse('pong'))
 
 
 origins = [
-    "capacitor://localhost",
-    "192.168.1.121",
-    "http://localhost:3000",
-    "http://127.0.0.1:3000",
-    "http://0.0.0.0:3000",
-    "http://51.250.86.226",
-    "http://app.fitboxing.pro",
-    "https://app.fitboxing.pro",
-    "http://localhost:4000",
-    "http://localhost:8500",
-    "https://fitbox.bounceme.net",
-    "https://683da30323fc1d0008f313d3--sunny-bonbon-2effb7.netlify.app"
+    'capacitor://localhost',
+    '192.168.1.121',
+    'http://localhost:3000',
+    'http://127.0.0.1:3000',
+    'http://0.0.0.0:3000',
+    'http://51.250.86.226',
+    'http://app.fitboxing.pro',
+    'https://app.fitboxing.pro',
+    'http://localhost:4000',
+    'http://localhost:8500',
+    'https://fitbox.bounceme.net',
+    'https://683da30323fc1d0008f313d3--sunny-bonbon-2effb7.netlify.app',
 ]
 
 
 def create_app() -> FastAPI:
     app = FastAPI(
         debug=True,
-        docs_url="/api/v1/docs",
-        openapi_url="/api/openapi.json",
+        docs_url='/api/v1/docs',
+        openapi_url='/api/openapi.json',
     )
     setup_routes(app)
     add_pagination(app)
@@ -50,8 +52,8 @@ def create_app() -> FastAPI:
         CORSMiddleware,
         allow_origins=origins,
         allow_credentials=True,
-        allow_methods=["*"],
-        allow_headers=["*"],
+        allow_methods=['*'],
+        allow_headers=['*'],
     )
 
     @app.on_event('startup')
@@ -66,9 +68,10 @@ def create_app() -> FastAPI:
                     client.connect(MQTT_BROKER, MQTT_PORT, keepalive=30),
                     timeout=5,
                 )
-                logger.info("✅ MQTT connected")
+                logger.info('✅ MQTT connected')
             except (asyncio.TimeoutError, OSError) as e:
-                logger.warning("⚠️  MQTT not connected: %s", e)
+                logger.warning('⚠️  MQTT not connected: %s', e)
+
         asyncio.create_task(_connect())
 
     @app.on_event('shutdown')
