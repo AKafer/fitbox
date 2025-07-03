@@ -34,7 +34,7 @@ async def start_all(
     mqtt: MQTTClient = Depends(get_mqtt),
     st: SensorsState = Depends(get_state),
 ) -> dict:
-    await mqtt.publish(MQTT_TOPIC_START, 'ALL', qos=1)
+    mqtt.publish(MQTT_TOPIC_START, 'ALL', qos=1)
     st.training_active = True
     return {'status': 'start sent', 'training_active': st.training_active}
 
@@ -44,7 +44,7 @@ async def stop_all(
     mqtt: MQTTClient = Depends(get_mqtt),
     st: SensorsState = Depends(get_state),
 ) -> dict:
-    await mqtt.publish(MQTT_TOPIC_STOP, 'ALL', qos=1)
+    mqtt.publish(MQTT_TOPIC_STOP, 'ALL', qos=1)
     st.training_active = False
     logger.info('📢 STOP всем устройствам')
     return {'status': 'stop sent', 'training_active': st.training_active}
