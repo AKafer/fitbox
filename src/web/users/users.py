@@ -141,9 +141,8 @@ class UserManager(UUIDIDMixin, BaseUserManager[User, uuid.UUID]):
             value=refresh_token,
             max_age=REFRESH_TTL,
             httponly=True,
-            # samesite="lax",
             samesite='none',
-            secure=True,  # for prod
+            secure=True,
         )
 
     async def get_by_phone(self, phone: str) -> User:
