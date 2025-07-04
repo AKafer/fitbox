@@ -25,7 +25,7 @@ from fastapi_users.db import SQLAlchemyUserDatabase
 from fastapi_users.jwt import decode_jwt, generate_jwt
 from sqlalchemy import func, select
 from web.users.schemas import UserCreate
-from web.users.services import calc_age, calc_score, calc_count_booking_info
+from web.users.services import calc_age, calc_count_booking_info, calc_score
 
 logger = logging.getLogger('control')
 
@@ -93,7 +93,11 @@ class UserManager(UUIDIDMixin, BaseUserManager[User, uuid.UUID]):
     ) -> models.UP:
         user = await super().create(user_create, safe=safe, request=request)
         user.age = calc_age(user.date_of_birth, None)
-        user.count_trainings, user.energy, user.status = calc_count_booking_info(user)
+        (
+            user.count_trainings,
+            user.energy,
+            user.status,
+        ) = calc_count_booking_info(user)
         user.score = calc_score(user)
         return user
 
@@ -115,7 +119,6 @@ class UserManager(UUIDIDMixin, BaseUserManager[User, uuid.UUID]):
         update_dict: Dict[str, Any],
         request: Optional[Request] = None,
     ):
-        # actualize journals in router
         logger.debug(f'User {user.id} has been updated.')
 
     async def on_before_delete(
@@ -198,15 +201,12 @@ class UserManager(UUIDIDMixin, BaseUserManager[User, uuid.UUID]):
         return user
 
     async def on_after_forgot_password(
-            self, user: models.UP, token: str, request: Optional[Request] = None
+        self, user: models.UP, token: str, request: Optional[Request] = None
     ) -> None:
-        print('AAAAAAAAAAAAAAAAAA')
-        print(f'***token***: {token}')
         logger.debug(f'***token***: {token}')
 
 
-async def \
-        get_user_manager(
+async def get_user_manager(
     user_db: SQLAlchemyUserDatabase = Depends(get_user_db),
 ):
     yield UserManager(user_db)
