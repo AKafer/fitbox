@@ -14,6 +14,8 @@ from web.bookings.routers import router as bookings_router
 from web.records.routers import router as records_router
 from web.transactions.routers import router as transactions_router
 from web.sensors.routers import router as sensors_router
+from web.auth.login import router as login_router
+from web.auth.refresh import router as refresh_router
 from web.users.users import (
     auth_backend,
     current_superuser,
@@ -64,116 +66,8 @@ api_v1_router.include_router(
     tags=["auth"],
 )
 
-bearer_refresh = HTTPBearer(auto_error=False)
-
-refresh_router = APIRouter(prefix='/auth', tags=['auth'])
 
 
-@refresh_router.post("/auth/jwt/refresh", summary="Renew JWT")
-async def refresh_tokens(
-    request: Request,
-    refresh_token: str | None,
-    response: Response,
-    creds: HTTPAuthorizationCredentials = Depends(bearer_refresh),
-    user_manager: UserManager = Depends(get_user_manager),
-):
-    logger.info("***REFRESH TOKEN***")
-
-    if refresh_token is None:
-        token = request.cookies.get("refresh_token")
-        if token is None:
-            raise HTTPException(status_code=401, detail="Missing refresh token")
-    else:
-        token = refresh_token
-
-    user = await verify_refresh(token, user_manager)
-
-    jwt_strategy = get_jwt_strategy()
-    new_access  = await jwt_strategy.write_token(user)
-    return {
-        "access_token": new_access,
-        "expires_in":  ACCESS_TTL,
-        "token_type":  "bearer",
-        "refresh_token": build_refresh_token(user),
-    }
-
-
-# @refresh_router.post("/auth/jwt/refresh_ios", summary="Renew JWT")
-# async def refresh_tokens(
-#     request: Request,
-#     token: str,
-#     response: Response,
-#     creds: HTTPAuthorizationCredentials = Depends(bearer_refresh),
-#     user_manager: UserManager = Depends(get_user_manager),
-# ):
-#     logger.info("***REFRESH TOKEN***")
-#
-#     user = await verify_refresh(token, user_manager)
-#     jwt_strategy = get_jwt_strategy()
-#     new_access  = await jwt_strategy.write_token(user)
-#     return {
-#         "access_token": new_access,
-#         "expires_in":  ACCESS_TTL,
-#         "token_type":  "bearer",
-#         "refresh_token": build_refresh_token(user),
-#     }
-
-
-
-class TokenPair(BaseModel):
-    access_token: str
-    refresh_token: str
-    token_type: str = "bearer"
-
-
-
-@api_v1_router.post(
-    "/auth/jwt/login",
-    response_model=TokenPair,
-    name="auth:login",
-    tags=["auth"]
-)
-async def login(
-    request: Request,
-    response: Response,
-    credentials: OAuth2PasswordRequestForm = Depends(),
-    user_manager=Depends(get_user_manager),
-):
-    user = await user_manager.authenticate(credentials)
-    if user is None:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="INVALID_CREDENTIALS",
-        )
-    access_token = await auth_backend.get_strategy().write_token(user)
-    refresh_token = build_refresh_token(user)
-    await user_manager.on_after_login(user, request, response)
-
-    return TokenPair(
-        access_token=access_token,
-        refresh_token=refresh_token,
-    )
-
-
-@api_v1_router.post(
-    "/auth/jwt/logout",
-    status_code=status.HTTP_204_NO_CONTENT,
-    name="auth:logout",
-    tags=["auth"],
-    dependencies=[Depends(current_user)]
-)
-async def logout(
-    response: Response,
-    # refresh_token: str | None = Cookie(default=None),
-):
-    response.delete_cookie(
-        key="refresh_token",
-        httponly=True,
-        samesite="none",
-        secure=True,
-    )
-
-    return Response(status_code=status.HTTP_204_NO_CONTENT)
 
 api_v1_router.include_router(refresh_router)
 api_v1_router.include_router(users_router)
@@ -182,3 +76,5 @@ api_v1_router.include_router(bookings_router)
 api_v1_router.include_router(records_router)
 api_v1_router.include_router(transactions_router)
 api_v1_router.include_router(sensors_router)
+api_v1_router.include_router(login_router)
+api_v1_router.include_router(refresh_router)
