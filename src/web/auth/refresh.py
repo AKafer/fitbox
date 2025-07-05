@@ -30,10 +30,10 @@ logger = logging.getLogger('control')
 @router.post('/refresh', summary='Renew JWT')
 async def refresh_tokens(
     request: Request,
-    refresh_token: str | None,
     response: Response,
     creds: HTTPAuthorizationCredentials = Depends(bearer_refresh),
     user_manager: UserManager = Depends(get_user_manager),
+    refresh_token: str | None = None,
 ):
     logger.info('***REFRESH TOKEN***')
 
