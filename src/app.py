@@ -34,6 +34,8 @@ origins = [
     'http://localhost:8500',
     'https://fitbox.bounceme.net',
     'https://683da30323fc1d0008f313d3--sunny-bonbon-2effb7.netlify.app',
+    'https://tver.fitboxing.pro',
+    'http://tver.fitboxing.pro',
 ]
 
 
