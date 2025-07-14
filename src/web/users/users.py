@@ -23,8 +23,8 @@ from fastapi_users.authentication import (
 )
 from fastapi_users.db import SQLAlchemyUserDatabase
 from fastapi_users.jwt import decode_jwt, generate_jwt
-from sqlalchemy import func, select
-from web.common.services import get_cookie_domain_from_url
+from sqlalchemy import select
+from web.common.common import get_cookie_domain_from_url
 from web.users.schemas import UserCreate
 from web.users.services import calc_age, calc_count_booking_info, calc_score
 
