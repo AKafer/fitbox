@@ -24,7 +24,7 @@ from fastapi_users.authentication import (
 from fastapi_users.db import SQLAlchemyUserDatabase
 from fastapi_users.jwt import decode_jwt, generate_jwt
 from sqlalchemy import select
-from web.common.common import get_cookie_domain_from_url
+from web.common.common import get_cookie_domain
 from web.users.schemas import UserCreate
 from web.users.services import calc_age, calc_count_booking_info, calc_score
 
@@ -138,7 +138,7 @@ class UserManager(UUIDIDMixin, BaseUserManager[User, uuid.UUID]):
         else:
             logger.debug(f'User {user.id} has logged in.')
 
-        domain = get_cookie_domain_from_url(request.url.hostname)
+        domain = get_cookie_domain(request.url.hostname)
         refresh_token = build_refresh_token(user)
         print('refresh_token', refresh_token)
         response.set_cookie(

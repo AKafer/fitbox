@@ -4,7 +4,7 @@ from pydantic import BaseModel
 from starlette import status
 from starlette.requests import Request
 from starlette.responses import Response
-from web.common.common import get_cookie_domain_from_url
+from web.common.common import get_cookie_domain
 from web.users.users import (
     auth_backend,
     build_refresh_token,
@@ -61,7 +61,7 @@ async def logout(
     request: Request,
     response: Response,
 ):
-    domain = get_cookie_domain_from_url(request.url.hostname)
+    domain = get_cookie_domain(request.url.hostname)
     response.delete_cookie(
         key='refresh_token',
         domain=domain,
