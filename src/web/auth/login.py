@@ -1,3 +1,5 @@
+import logging
+
 from fastapi import APIRouter, Depends, HTTPException
 from fastapi.security import OAuth2PasswordRequestForm
 from pydantic import BaseModel
@@ -11,6 +13,8 @@ from web.users.users import (
     current_user,
     get_user_manager,
 )
+
+logger = logging.getLogger('control')
 
 router = APIRouter(
     prefix='/auth/jwt',
@@ -62,6 +66,7 @@ async def logout(
     response: Response,
 ):
     domain = get_cookie_domain(request.url.hostname)
+    logger.info(f'******Try logout user {request.state.user.id} from {domain}')
     response.delete_cookie(
         key='refresh_token',
         domain=domain,
