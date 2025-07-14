@@ -1,6 +1,7 @@
 import contextlib
 import logging
 from logging import config as logging_config
+from urllib.parse import urlparse
 
 import settings
 from database.models.users import get_user_db
@@ -48,3 +49,11 @@ async def create_user(
                 return user
     except UserAlreadyExists:
         logger.error(f'User {email} already exists')
+
+
+def get_cookie_domain_from_url(url: str) -> str | None:
+    hostname = urlparse(url).hostname or ''
+    parts = hostname.split('.')
+    if len(parts) >= 3:
+        return '.' + '.'.join(parts[-2:])
+    return None
