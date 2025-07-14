@@ -48,7 +48,9 @@ services:
         - "9001:9001"
       volumes:
         - ./mosquitto.conf:/mosquitto/config/mosquitto.conf:ro
-        - /etc/letsencrypt/live/fitbox.bounceme.net:/mosquitto/certs:ro
+        - /etc/letsencrypt/live/fitbox.bounceme.net/fullchain.pem:/mosquitto/certs/chain.pem
+        - /etc/letsencrypt/live/fitbox.bounceme.net/cert.pem:/mosquitto/certs/cert.pem
+        - /etc/letsencrypt/live/fitbox.bounceme.net/privkey.pem:/mosquitto/certs/privkey.pem
       networks:
         - fitbox
 
