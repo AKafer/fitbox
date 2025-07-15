@@ -66,7 +66,7 @@ async def logout(
     response: Response,
 ):
     domain = get_cookie_domain(request.url.hostname)
-    logger.info(f'******Try logout user {request.state.user.id} from {domain}')
+    logger.info(f'******Try logout user from {domain}')
     response.delete_cookie(
         key='refresh_token',
         domain=domain,
