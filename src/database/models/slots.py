@@ -27,3 +27,11 @@ class Slots(BaseModel):
         cascade="all, delete, delete-orphan",
         single_parent=True,
     )
+
+    sprints = relationship(
+        "Sprints",
+        back_populates="slot",
+        lazy='selectin',
+        cascade="all, delete, delete-orphan",
+        single_parent=True,
+    )

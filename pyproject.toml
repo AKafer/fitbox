@@ -18,6 +18,7 @@ dependencies = [
     "fastapi-pagination[sqlalchemy] (>=0.13.1,<0.14.0)",
     "fastapi-users[sqlalchemy] (>=14.0.1,<15.0.0)",
     "gmqtt (>=0.7.0,<0.8.0)",
+    "openpyxl (>=3.1.5,<4.0.0)",
 ]
 
 

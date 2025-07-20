@@ -7,3 +7,6 @@ status_levels = {
     '5': 5000,
     '6': 9500,
 }
+
+CMD_START = 'START'
+ALL_DEVICES_ID = 'ALL'
