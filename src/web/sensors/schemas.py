@@ -17,5 +17,6 @@ class HitsChunk(BaseModel):
 
 class StartSprintInptut(BaseModel):
     session_id: int
+    sprint_id: int
     blink_interval: int
     led_on_ms: int

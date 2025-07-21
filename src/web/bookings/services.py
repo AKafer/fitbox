@@ -45,3 +45,21 @@ async def update_booking_in_db(
     await db_session.commit()
     await db_session.refresh(booking)
     return booking
+
+
+async def calculate_sprints_data(
+    booking: Bookings,
+    db_session: AsyncSession,
+):
+    return {
+        '1': {
+            'power': 16,
+            'energy': 80,
+            'tempo': 100,
+        },
+        '2': {
+            'power': 70,
+            'energy': 80,
+            'tempo': 91,
+        }
+    }

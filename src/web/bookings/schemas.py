@@ -32,6 +32,12 @@ class Booking(BaseModel):
     model_config = {"from_attributes": True}
 
 
+class DetailedBooking(Booking):
+    sprints_data: dict | None = None
+
+    model_config = {"from_attributes": True}
+
+
 class BookingCreateInput(BaseModel):
     created_at: datetime
     slot_id: int

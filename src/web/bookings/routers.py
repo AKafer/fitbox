@@ -12,9 +12,10 @@ from starlette.exceptions import HTTPException
 
 from main_schemas import ResponseErrorBody
 from web.bookings.filters import BookingsFilter
-from web.bookings.schemas import Booking, BookingCreateInput, BookingCreateByAdminInput, BookingUpdateInput
+from web.bookings.schemas import Booking, BookingCreateInput, BookingCreateByAdminInput, BookingUpdateInput, \
+    DetailedBooking
 from web.bookings.services import check_before_create, NotFoundSlotError, DuplicateBookingError, ExcessiveBookingError, \
-    update_booking_in_db
+    update_booking_in_db, calculate_sprints_data
 from web.users.users import current_superuser, current_user
 
 router = APIRouter(
@@ -35,6 +36,35 @@ async def get_all_bookings(
     query = booking_filter.filter(query)
     bookings = await db_session.execute(query)
     return bookings.scalars().all()
+
+
+@router.get(
+    '/{booking_id:int}',
+    response_model=DetailedBooking,
+    dependencies=[Depends(current_user)]
+)
+async def get_booking_by_id(
+    booking_id: int,
+    db_session: AsyncSession = Depends(get_db_session),
+    user: User = Depends(current_user)
+):
+    query = select(Bookings).where(Bookings.id == booking_id)
+    booking = await db_session.scalar(query)
+    if booking is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f'Booking with id {booking_id} not found',
+        )
+    if not user.is_superuser and booking.user_id != user.id:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail='You do not have permission to view this booking',
+        )
+    if not booking.sprints_data and booking.sensor_id:
+        booking.sprints_data = await calculate_sprints_data(booking, db_session)
+        await db_session.commit()
+        await db_session.refresh(booking)
+    return booking
 
 
 @router.post(

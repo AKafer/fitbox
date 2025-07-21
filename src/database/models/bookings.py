@@ -2,6 +2,8 @@ import sqlalchemy as sa
 from sqlalchemy.orm import relationship
 
 from database.orm import BaseModel
+from sqlalchemy.dialects.postgresql import JSONB
+from sqlalchemy.ext.mutable import MutableDict
 
 
 class Bookings(BaseModel):
@@ -23,6 +25,11 @@ class Bookings(BaseModel):
     power = sa.Column(sa.Float, nullable=True)
     energy = sa.Column(sa.Float, nullable=True)
     tempo = sa.Column(sa.Float, nullable=True)
+    sprints_data = sa.Column(
+        MutableDict.as_mutable(JSONB),
+        nullable=True,
+        default=dict,
+    )
 
 
     __table_args__ = (

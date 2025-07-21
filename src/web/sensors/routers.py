@@ -46,6 +46,7 @@ async def start_all(
         'cmd': CMD_START,
         'device_id': ALL_DEVICES_ID,
         'session_id': start_input.session_id,
+        'sprint_id': start_input.sprint_id,
         'blink_interval': start_input.blink_interval,
         'led_on_ms': start_input.led_on_ms,
     }
