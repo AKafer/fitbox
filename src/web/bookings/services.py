@@ -102,7 +102,7 @@ async def calculate_sprints_data(
         current_sprint_data = (sprint.data or {}).get('hits', [])
         if not current_sprint_data:
             continue
-        blink_interval = float(sprint.data.get('blink_interval', DEFAUL_BLINK_INTERVAL))
+        blink_interval = float(sprint.data.get('blink_interval', DEFAUL_BLINK_INTERVAL)) or DEFAUL_BLINK_INTERVAL
         if not blink_interval:
             continue
         hit_count = len(current_sprint_data)
