@@ -81,7 +81,8 @@ async def status(st: SensorsState = Depends(get_state)) -> dict:
 
 @router.post('/api/v1/hits/bulk')
 async def receive_hits(
-    input_chunk: HitsChunk, db_session: AsyncSession = Depends(get_db_session)
+    input_chunk: HitsChunk,
+    db_session: AsyncSession = Depends(get_db_session)
 ) -> dict:
     logger.info(
         '(slot_id %s, sprint_id %s, sensor_id %s): accept: %d hits',
@@ -117,6 +118,7 @@ async def receive_hits(
     hits_list.extend(new_hits)
     sprint.data['total_hits'] = len(hits_list)
     sprint.data['hits'] = hits_list
+    sprint.data['blink_interval'] = input_chunk.blink_interval
 
     logger.debug(
         '(slot_id %s, sprint_id %s, sensor_id %s): added: %d, total %d',

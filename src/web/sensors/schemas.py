@@ -12,6 +12,7 @@ class HitsChunk(BaseModel):
     device_id: str
     session_id: str
     sprint_id: str | None = None
+    blink_interval: str | None = None
     hits: List[Hit]
 
 
