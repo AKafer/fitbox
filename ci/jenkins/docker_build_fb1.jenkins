@@ -46,6 +46,8 @@ pipeline {
                     sh '''
                     scp docker-compose.yaml root@ub2:/root/app/FITBOX/docker-compose.yaml
                     scp mosquitto.conf root@ub2:/root/app/FITBOX/mosquitto.conf
+                    scp prometheus.yml root@ub2:/root/app/FITBOX/prometheus.yml
+                    scp metrics_pwd root@ub2:/root/app/FITBOX/metrics_pwd
                     '''
                 }
             }

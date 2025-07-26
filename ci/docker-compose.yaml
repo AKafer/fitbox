@@ -47,12 +47,26 @@ services:
         - "1883:1883"
         - "9001:9001"
       volumes:
-        - ./mosquitto.conf:/mosquitto/config/mosquitto.conf:ro
+        - ./mosquitto.conf:/mosquitto/config/mosquitto.conf
         - /etc/letsencrypt/live/${SERVER_HOSTNAME}/fullchain.pem:/mosquitto/certs/chain.pem
         - /etc/letsencrypt/live/${SERVER_HOSTNAME}/cert.pem:/mosquitto/certs/cert.pem
         - /etc/letsencrypt/live/${SERVER_HOSTNAME}/privkey.pem:/mosquitto/certs/privkey.pem
       networks:
         - fitbox
+
+  prometheus:
+    image: prom/prometheus:v2.52.0
+    container_name: fitbox_prometheus
+    restart: unless-stopped
+    ports:
+      - "127.0.0.1:9090:9090"
+    volumes:
+      - ./prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - ./metrics_pwd:/etc/prometheus/metrics_pwd:ro
+    command:
+      - "--config.file=/etc/prometheus/prometheus.yml"
+    networks:
+      - fitbox
 
 volumes:
   postgres_data_fitbox:
