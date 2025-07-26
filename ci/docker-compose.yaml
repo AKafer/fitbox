@@ -59,13 +59,13 @@ services:
     container_name: fitbox_prometheus
     restart: unless-stopped
     ports:
-      - "9090:9090"
+      - "127.0.0.1:9090:9090"
     volumes:
       - ./prometheus.yml:/etc/prometheus/prometheus.yml:ro
       - ./metrics_pwd:/etc/prometheus/metrics_pwd:ro
     command:
       - "--config.file=/etc/prometheus/prometheus.yml"
-      - "--web.listen-address=127.0.0.1:9090"
+      - "--web.listen-address=0.0.0.0:9090"
     networks:
       - fitbox
 
