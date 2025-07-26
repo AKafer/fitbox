@@ -59,7 +59,7 @@ services:
     container_name: fitbox_prometheus
     restart: unless-stopped
     ports:
-      - "127.0.0.1:9090:9090"
+      - "9090:9090"
     volumes:
       - ./prometheus.yml:/etc/prometheus/prometheus.yml:ro
       - ./metrics_pwd:/etc/prometheus/metrics_pwd:ro
