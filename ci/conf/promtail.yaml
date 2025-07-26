@@ -20,26 +20,24 @@ scrape_configs:
         regex: running
         action: keep
 
+      - source_labels: [__meta_docker_container_name]
+        regex: '/(.+)'
+        target_label: container_name
+
+      - source_labels: [__meta_docker_container_id]
+        target_label: __path__
+        replacement: /var/lib/docker/containers/${1}/*-json.log
+
     pipeline_stages:
-      - regex:
-          source: __meta_docker_container_name
-          expression: '^/(.*)$'
-          replace: '${1}'
-          target: container_name
-
-
       - cri: {}
-
       - json:
           expressions:
             log: log
             stream: stream
             timestamp: time
-
       - labels:
           container_name:
           stream:
-
       - timestamp:
           source: timestamp
           format: RFC3339Nano
