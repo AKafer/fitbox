@@ -39,7 +39,13 @@ pipeline {
                 }
             }
         }
-        stage("copy docker_compose file") {
+        stage("del old confs") {
+            steps {
+                echo " ============== go to server =================="
+                sh 'ssh root@ub2 "cd /root/app/FITBOX && rm -rf conf/ && rm -rf docker-compose.yaml"'
+            }
+        }
+        stage("copy config files") {
             steps {
                 echo " ============== copy files =================="
                 dir ('./ci') {
