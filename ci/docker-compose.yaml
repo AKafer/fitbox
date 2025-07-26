@@ -99,7 +99,7 @@ services:
     image: grafana/grafana:latest
     container_name: grafana
     ports:
-      - "3000:3000"
+      - "3000:3030"
     environment:
       - GF_SECURITY_ADMIN_USER=${METRICS_USER}
       - GF_SECURITY_ADMIN_PASSWORD=${METRICS_PASSWORD}
