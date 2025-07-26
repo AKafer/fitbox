@@ -53,6 +53,3 @@ class BookingCreateByAdminInput(BaseModel):
 
 class BookingUpdateInput(BaseModel):
     is_done: bool | None = None
-    power: float | None = None
-    energy: float | None = None
-    tempo: float | None = None

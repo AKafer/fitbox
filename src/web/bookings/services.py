@@ -1,11 +1,8 @@
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from constants import DEFAULT_BLINK_INTERVAL, KOEF_POWER, DEGREE_POWER
+from constants import DEFAULT_BLINK_INTERVAL, KOEF_POWER, DEGREE_POWER, TEMPO_BORDER_PERCENT
 from database.models import Slots, Bookings, User, Sprints
-
-
-tempo_border = 150
 
 
 class DuplicateBookingError(Exception):
@@ -59,7 +56,7 @@ def is_synced_hit(time_ms: int, blink_interval: float) -> bool:
         return False
     k = round(time_ms / blink_interval)
     nearest = k * blink_interval
-    return abs(time_ms - nearest) <= tempo_border
+    return abs(time_ms - nearest) <= blink_interval * TEMPO_BORDER_PERCENT
 
 
 def calculate_sprint_metrics(hits: list, blink_interval: float, hit_count: int):
@@ -105,8 +102,6 @@ async def calculate_sprints_data(
         blink_interval = float(
             sprint.data.get("blink_interval") or DEFAULT_BLINK_INTERVAL
         )
-        if not blink_interval:
-            continue
         hit_count = len(current_sprint_data)
         tempo, power, energy = calculate_sprint_metrics(current_sprint_data, blink_interval, hit_count)
         sprints_data[str(sprint.sprint_id)] = {

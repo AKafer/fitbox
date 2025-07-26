@@ -60,20 +60,6 @@ async def get_booking_by_id(
             status_code=status.HTTP_403_FORBIDDEN,
             detail='You do not have permission to view this booking',
         )
-    if not booking.sprints_data and booking.sensor_id:
-        booking.sprints_data = await calculate_sprints_data(booking, db_session)
-        len_sprints_data = len(booking.sprints_data)
-        if len_sprints_data > 0:
-            sum_power, sum_energy, sum_tempo = 0, 0, 0
-            for key, value in booking.sprints_data.items():
-                sum_power += value.get('power', 0)
-                sum_energy += value.get('energy', 0)
-                sum_tempo += value.get('tempo', 0)
-            booking.power = round(sum_power / len_sprints_data, 2)
-            booking.energy = round(sum_energy / len_sprints_data, 2)
-            booking.tempo = round(sum_tempo / len_sprints_data, 2)
-        await db_session.commit()
-        await db_session.refresh(booking)
     return booking
 
 
@@ -204,6 +190,18 @@ async def update_booking(
     query = select(User).filter(User.id == booking.user_id)
     user = await db_session.scalar(query)
     try:
+        if update_input.is_done:
+            booking.sprints_data = await calculate_sprints_data(booking, db_session)
+            len_sprints_data = len(booking.sprints_data)
+            if len_sprints_data > 0:
+                sum_power, sum_energy, sum_tempo = 0, 0, 0
+                for key, value in booking.sprints_data.items():
+                    sum_power += value.get('power', 0)
+                    sum_energy += value.get('energy', 0)
+                    sum_tempo += value.get('tempo', 0)
+                booking.power = round(sum_power / len_sprints_data, 2)
+                booking.energy = round(sum_energy / len_sprints_data, 2)
+                booking.tempo = round(sum_tempo / len_sprints_data, 2)
         if all([
             hasattr(update_input, 'is_done'),
             update_input.is_done,

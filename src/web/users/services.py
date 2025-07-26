@@ -23,7 +23,7 @@ def calc_count_booking_info(user: User) -> (int, float, str):
         if hasattr(booking, 'is_done') and booking.is_done:
             trainings_count += 1
             if hasattr(booking, 'energy'):
-                energy += booking.energy
+                energy += booking.energy or 0
     status = ''
     for installed_status, level in constants.status_levels.items():
         if energy >= level:
