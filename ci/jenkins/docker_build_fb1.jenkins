@@ -47,8 +47,8 @@ pipeline {
                     scp docker-compose.yaml root@ub2:/root/app/FITBOX/docker-compose.yaml
                     scp conf/mosquitto.conf root@ub2:/root/app/FITBOX/conf/mosquitto.conf
                     scp conf/prometheus.yml root@ub2:/root/app/FITBOX/conf/prometheus.yml
-                    scp conf/loki.yaml root@ub2:/root/app/FITBOX/conf/loki.yml
-                    scp conf/promtail.yaml root@ub2:/root/app/FITBOX/conf/promtail.yml
+                    scp conf/loki.yaml root@ub2:/root/app/FITBOX/conf/loki.yaml
+                    scp conf/promtail.yaml root@ub2:/root/app/FITBOX/conf/promtail.yaml
                     '''
                 }
             }
