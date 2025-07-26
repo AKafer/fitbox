@@ -45,8 +45,10 @@ pipeline {
                 dir ('./ci') {
                     sh '''
                     scp docker-compose.yaml root@ub2:/root/app/FITBOX/docker-compose.yaml
-                    scp mosquitto.conf root@ub2:/root/app/FITBOX/mosquitto.conf
-                    scp prometheus.yml root@ub2:/root/app/FITBOX/prometheus.yml
+                    scp conf/mosquitto.conf root@ub2:/root/app/FITBOX/conf/mosquitto.conf
+                    scp conf/prometheus.yml root@ub2:/root/app/FITBOX/conf/prometheus.yml
+                    scp conf/loki.yml root@ub2:/root/app/FITBOX/conf/loki.yml
+                    scp conf/promtail.yml root@ub2:/root/app/FITBOX/conf/promtail.yml
                     '''
                 }
             }

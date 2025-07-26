@@ -1,19 +1,18 @@
-import os, secrets, asyncio
+import asyncio
 import logging.config
 
-from fastapi import FastAPI, Depends
+from fastapi import Depends, FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.security import HTTPBasic, HTTPBasicCredentials
 from fastapi_pagination import add_pagination
 from gmqtt import Client as MQTTClient
-from starlette import status
-from starlette.exceptions import HTTPException
+from prometheus_fastapi_instrumentator import Instrumentator
+from starlette.responses import PlainTextResponse
 
+from monitoring.instumentator import verify_metrics_creds
 from routers import api_v1_router
 from settings import LOGGING, MQTT_BROKER, MQTT_PORT
-from starlette.responses import PlainTextResponse
 from state import SensorsState
-from prometheus_fastapi_instrumentator import Instrumentator
+
 
 logging.config.dictConfig(LOGGING)
 
@@ -43,18 +42,6 @@ origins = [
     'http://tver.fitboxing.pro',
 ]
 
-security = HTTPBasic()
-
-def verify_metrics_creds(creds: HTTPBasicCredentials = Depends(security)):
-    """Basic‑auth guard for /metrics."""
-    u_ok = secrets.compare_digest(creds.username, os.getenv("METRICS_USER"))
-    p_ok = secrets.compare_digest(creds.password, os.getenv("METRICS_PASSWORD"))
-    if not (u_ok and p_ok):
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            headers={"WWW-Authenticate": "Basic"},
-        )
-
 
 def create_app() -> FastAPI:
     app = FastAPI(
@@ -64,7 +51,6 @@ def create_app() -> FastAPI:
     )
     setup_routes(app)
     add_pagination(app)
-    # app.mount(f"/api/{settings.STATIC_FOLDER}", StaticFiles(directory='static'), name='static')
     # logging_config.dictConfig(settings.LOGGING)
     app.add_middleware(
         CORSMiddleware,
@@ -77,9 +63,9 @@ def create_app() -> FastAPI:
     Instrumentator(
         should_group_status_codes=False,
         should_ignore_untemplated=True,
-    ).instrument(app).expose(
+    ).instrument(app, metric_namespace='fitbox').expose(
         app,
-        endpoint="/metrics",
+        endpoint='/metrics',
         include_in_schema=False,
         dependencies=[Depends(verify_metrics_creds)],
     )

@@ -47,7 +47,7 @@ services:
         - "1883:1883"
         - "9001:9001"
       volumes:
-        - ./mosquitto.conf:/mosquitto/config/mosquitto.conf
+        - ./conf/mosquitto.conf:/mosquitto/config/mosquitto.conf
         - /etc/letsencrypt/live/${SERVER_HOSTNAME}/fullchain.pem:/mosquitto/certs/chain.pem
         - /etc/letsencrypt/live/${SERVER_HOSTNAME}/cert.pem:/mosquitto/certs/cert.pem
         - /etc/letsencrypt/live/${SERVER_HOSTNAME}/privkey.pem:/mosquitto/certs/privkey.pem
@@ -61,16 +61,62 @@ services:
     ports:
       - "127.0.0.1:9090:9090"
     volumes:
-      - ./prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - ./conf/prometheus.yml:/etc/prometheus/prometheus.yml:ro
       - ./metrics_pwd:/etc/prometheus/metrics_pwd:ro
+      - prometheus_data:/prometheus
     command:
       - "--config.file=/etc/prometheus/prometheus.yml"
       - "--web.listen-address=0.0.0.0:9090"
     networks:
       - fitbox
 
+  loki:
+    image: grafana/loki:latest
+    container_name: loki
+    ports:
+      - "3100:3100"
+    volumes:
+      - ./conf/loki.yaml:/etc/loki/local-config.yaml
+      - loki_data:/loki
+    networks:
+      - fitbox
+
+  promtail:
+    image: grafana/promtail:latest
+    container_name: promtail
+    ports:
+      - "9080:9080"
+    volumes:
+      - /var/lib/docker/containers:/var/lib/docker/containers:ro
+      - /var/run/docker.sock:/var/run/docker.sock
+      - ./conf/promtail.yaml:/etc/promtail/config.yml
+    command: -config.file=/etc/promtail/config.yml
+    privileged: true
+    networks:
+      - fitbox
+
+  grafana:
+    image: grafana/grafana:latest
+    container_name: grafana
+    ports:
+      - "3000:3000"
+    environment:
+      - GF_SECURITY_ADMIN_USER=${METRICS_USER}
+      - GF_SECURITY_ADMIN_PASSWORD=${METRICS_PASSWORD}
+    depends_on:
+      - prometheus
+      - loki
+    volumes:
+      - ./conf/grafana/datasources.yaml:/etc/grafana/provisioning/datasources/datasources.yaml
+      - grafana_data:/var/lib/grafana
+    networks:
+      - fitbox
+
 volumes:
   postgres_data_fitbox:
+  prometheus_data:
+  grafana_data:
+  loki_data:
 
 networks:
   fitbox:
