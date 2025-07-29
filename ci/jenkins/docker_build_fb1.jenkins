@@ -50,8 +50,8 @@ pipeline {
                 echo " ============== copy files =================="
                 dir ('./ci') {
                     sh '''
-                    scp docker-compose.yaml root@ub2:/root/app/FITBOX/docker-compose.yaml
-                    scp -r conf/. root@ub2:/root/app/FITBOX/conf/
+                     rsync -avz docker-compose.yaml  root@ub2:/root/app/FITBOX/docker-compose.yaml
+                     rsync -avz --delete conf/  root@ub2:/root/app/FITBOX/conf/
                     '''
                 }
             }
