@@ -39,9 +39,9 @@ services:
         loki-pipeline-stages: |
           - json:
               expressions:
-                level: level
+                level: level    
           - labels:
-              level
+              level: ""
     env_file:
       - .env
     volumes:
