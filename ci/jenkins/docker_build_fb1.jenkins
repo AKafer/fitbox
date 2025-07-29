@@ -51,7 +51,7 @@ pipeline {
                 dir ('./ci') {
                     sh '''
                     scp docker-compose.yaml root@ub2:/root/app/FITBOX/docker-compose.yaml
-                    scp -r ./conf/ root@ub2:/root/app/FITBOX/conf/
+                    scp -r conf/* root@ub2:/root/app/FITBOX/conf/
                     '''
                 }
             }
