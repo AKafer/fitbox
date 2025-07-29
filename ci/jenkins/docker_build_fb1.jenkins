@@ -42,7 +42,7 @@ pipeline {
         stage("del old confs") {
             steps {
                 echo " ============== go to server =================="
-                sh 'ssh root@ub2 "cd /root/app/FITBOX && rm -rf conf/ && mkdir -p /root/app/FITBOX/conf && rm -rf docker-compose.yaml"'
+                sh 'ssh root@ub2 "cd /root/app/FITBOX && rm -rf conf/ && rm -rf docker-compose.yaml"'
             }
         }
         stage("copy config files") {
@@ -50,8 +50,8 @@ pipeline {
                 echo " ============== copy files =================="
                 dir ('./ci') {
                     sh '''
-                     rsync -avz docker-compose.yaml  root@ub2:/root/app/FITBOX/docker-compose.yaml
-                     rsync -avz --delete conf/  root@ub2:/root/app/FITBOX/conf/
+                    scp docker-compose.yaml root@ub2:/root/app/FITBOX/docker-compose.yaml
+                    scp -r conf root@ub2:/root/app/FITBOX/
                     '''
                 }
             }
