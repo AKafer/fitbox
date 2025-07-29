@@ -36,12 +36,6 @@ services:
         loki-external-labels: "app=fitbox"
         loki-batch-size: "400"
         loki-retries: "3"
-        loki-pipeline-stages: |
-          - json:
-              expressions:
-                level: level    
-          - labels:
-              level: ""
     env_file:
       - .env
     volumes:
