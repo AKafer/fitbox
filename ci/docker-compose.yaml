@@ -38,7 +38,7 @@ services:
         loki-retries: "3"
         loki-pipeline-stages: |
           - regex:
-              expression: '(level|lvl|severity)=(?P<level>\w+)'
+              expression: '^(?P<level>DEBUG|INFO|WARNING|ERROR|CRITICAL)'
           - labels:
               level:
     env_file:
