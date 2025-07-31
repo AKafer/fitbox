@@ -1,18 +1,10 @@
 import logging
 
-from fastapi import (
-    APIRouter,
-    Cookie,
-    Depends,
-    HTTPException,
-    Request,
-    Response,
-)
-from fastapi.security import (
-    HTTPAuthorizationCredentials,
-    HTTPBearer,
-    OAuth2PasswordRequestForm,
-)
+from fastapi import APIRouter, Depends, HTTPException, Request
+from fastapi.security import HTTPBearer
+from jwt import ExpiredSignatureError
+from starlette import status
+
 from web.users.users import (
     ACCESS_TTL,
     UserManager,
@@ -30,13 +22,9 @@ logger = logging.getLogger('control')
 @router.post('/refresh', summary='Renew JWT')
 async def refresh_tokens(
     request: Request,
-    response: Response,
-    creds: HTTPAuthorizationCredentials = Depends(bearer_refresh),
     user_manager: UserManager = Depends(get_user_manager),
     refresh_token: str | None = None,
 ):
-    logger.info('***REFRESH TOKEN***')
-
     if refresh_token is None:
         token = request.cookies.get('refresh_token')
         if token is None:
@@ -46,8 +34,14 @@ async def refresh_tokens(
     else:
         token = refresh_token
 
-    user = await verify_refresh(token, user_manager)
-
+    try:
+        user = await verify_refresh(token, user_manager)
+    except ExpiredSignatureError:
+        logger.warning('Refresh token has expired')
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail='Refresh token has expired',
+        )
     jwt_strategy = get_jwt_strategy()
     new_access = await jwt_strategy.write_token(user)
     return {
