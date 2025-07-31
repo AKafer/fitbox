@@ -67,12 +67,10 @@ async def verify_refresh(token: str, user_manager: 'UserManager') -> User:
     except (JWTDecodeError, ValueError, KeyError):
         raise HTTPException(status_code=401, detail='Invalid refresh token')
 
-    print(f'[refresh] sub from token → {user_id}')
-
     try:
         parsed_id = user_manager.parse_id(user_id)
         user = await user_manager.get(parsed_id)
-        print('user', user)
+        logger.info('Verified user: %s', user.id)
     except exceptions.UserNotExists:
         raise HTTPException(status_code=401, detail='User not found')
 
@@ -140,7 +138,7 @@ class UserManager(UUIDIDMixin, BaseUserManager[User, uuid.UUID]):
 
         domain = get_cookie_domain(request.url.hostname)
         refresh_token = build_refresh_token(user)
-        print('refresh_token', refresh_token)
+        logger.info('refresh_token: %s', refresh_token)
         response.set_cookie(
             key='refresh_token',
             value=refresh_token,
@@ -176,10 +174,10 @@ class UserManager(UUIDIDMixin, BaseUserManager[User, uuid.UUID]):
         identifier = credentials.username
         try:
             if '@' in identifier:
-                print('EMAIL')
+                logger.info('Identifier: %s', 'EMAIL')
                 user = await self.get_by_email(identifier)
             else:
-                print('PHONE')
+                logger.info('Identifier: %s', 'PHONE')
                 user = await self.get_by_phone(identifier)
         except exceptions.UserNotExists:
             # Run the hasher to mitigate timing attack

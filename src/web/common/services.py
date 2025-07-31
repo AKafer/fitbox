@@ -47,4 +47,4 @@ async def create_user(
                 logger.info(f'User created {user}')
                 return user
     except UserAlreadyExists:
-        logger.error(f'User {email} already exists')
+        logger.warning(f'User {email} already exists')
