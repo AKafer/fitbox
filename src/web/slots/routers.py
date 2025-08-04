@@ -78,6 +78,52 @@ async def get_slot_by_id(
     return slot
 
 
+@router.get(
+    '/results/{slot_id:int}',
+    response_model=dict[str, float],
+    responses={
+        status.HTTP_400_BAD_REQUEST: {
+            'model': ResponseErrorBody,
+        },
+        status.HTTP_404_NOT_FOUND: {
+            'model': ResponseErrorBody,
+        },
+    },
+    dependencies=[Depends(current_user)]
+)
+async def get_results(
+    slot_id: int,
+    db_session: AsyncSession = Depends(get_db_session),
+    user: User = Depends(current_user)
+):
+    query = select(Slots).filter(Slots.id == slot_id)
+    slot = await db_session.scalar(query)
+    if slot is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f'Slot with id {slot_id} not found',
+        )
+    bookings = slot.bookings
+    user_can_see_results = False
+    energy_dict = {}
+    for booking in bookings:
+        if not booking.is_done:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail=f'Not all bookings are done for slot {slot_id}',
+            )
+        if booking.user_id == user.id:
+            user_can_see_results= True
+        energy_dict[f'{booking.user.last_name} {booking.user.name}'] = booking.energy
+    if not user.is_superuser and not user_can_see_results:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail='You do not have permission to view results for this slot',
+        )
+    sorted_dict = dict(sorted(energy_dict.items(), key=lambda kv: kv[1], reverse=True))
+    return sorted_dict
+
+
 @router.post(
     '/',
     response_model=Slot,
@@ -252,3 +298,6 @@ async def delete_slot(
     await db_session.delete(slot)
     await db_session.commit()
     return Response(status_code=status.HTTP_204_NO_CONTENT)
+
+
+

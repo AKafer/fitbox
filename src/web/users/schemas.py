@@ -51,6 +51,8 @@ class UserRead(schemas.BaseUser[uuid.UUID]):
     last_name: str
     father_name: str | None
     phone: str | None
+    telegram_id: str | None
+    photo_url: str | None
     gender: str | None
     date_of_birth: date | None
     created_at: datetime
@@ -76,6 +78,7 @@ class UserCreate(schemas.BaseUserCreate):
     last_name: str
     father_name: str | None = None
     phone: str | None = None
+    telegram_id: str | None = None
     gender: str | None = None
     date_of_birth: date | None = None
     is_active: bool = Field(True, exclude=True)
@@ -90,6 +93,7 @@ class UserUpdate(schemas.BaseUserUpdate):
     last_name: str | None = None
     father_name: str | None = None
     phone: str | None = None
+    telegram_id: str | None = None
     gender: str | None = None
     date_of_birth: date | None = None
     is_active: bool = Field(True, exclude=True)
@@ -103,6 +107,7 @@ class UserListRead(schemas.BaseUser[uuid.UUID]):
     last_name: str
     father_name: str | None
     phone: str | None
+    telegram_id: str | None
     gender: str | None = None
     date_of_birth: date | None
     age: int | None = 0

@@ -35,6 +35,8 @@ class User(SQLAlchemyBaseUserTableUUID, BaseModel):
     last_name: Mapped[str] = mapped_column(String(length=320), nullable=False)
     father_name: Mapped[str] = mapped_column(String(length=320), nullable=True)
     phone: Mapped[str] = mapped_column(String(length=320), nullable=True)
+    telegram_id: Mapped[str] = mapped_column(String(length=320), nullable=True)
+    photo_url: Mapped[str] = mapped_column(String(length=1024), nullable=True, default=None)
     gender: Mapped[str] = mapped_column(
         String(length=10), nullable=True, default=None
     )

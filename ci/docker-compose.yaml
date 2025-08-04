@@ -45,6 +45,7 @@ services:
       - .env
     volumes:
         - ./logs:/app/src/logs
+        - ./files/photos:/app/src/static/photos
     depends_on:
       db: {condition: service_healthy}
       mosquitto: {condition: service_started}

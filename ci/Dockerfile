@@ -24,11 +24,7 @@ COPY src/ /app/src
 RUN rm -rf /app/src/logs && rm -rf /app/src/static
 RUN mkdir /app/src/logs && touch /app/src/logs/app.log
 RUN mkdir -p /app/src/static && \
-    mkdir -p /app/src/static/instructions &&\
-    mkdir -p /app/src/static/signatures && \
-    mkdir -p /app/src/static/templates && \
-    mkdir -p /app/src/static/training_modules && \
-    mkdir -p /tmp/generated_docs
+    mkdir -p /app/src/static/photos
 
 ENV PYTHONPATH "${PYTHONPATH}:/app/src"
 ENV PYTHONUNBUFFERED=TRUE

@@ -1,5 +1,6 @@
 import asyncio
 import logging.config
+import json
 
 from fastapi import Depends, FastAPI
 from fastapi.middleware.cors import CORSMiddleware
@@ -7,10 +8,12 @@ from fastapi_pagination import add_pagination
 from gmqtt import Client as MQTTClient
 from prometheus_fastapi_instrumentator import Instrumentator
 from starlette.responses import PlainTextResponse
+from starlette.staticfiles import StaticFiles
 
+import settings
 from monitoring.instumentator import verify_metrics_creds
 from routers import api_v1_router
-from settings import LOGGING, MQTT_BROKER, MQTT_PORT
+from settings import LOGGING, MQTT_BROKER, MQTT_PORT, CLEAN_TTL, CLEAN_PERIOD
 from state import SensorsState
 
 
@@ -51,6 +54,7 @@ def create_app() -> FastAPI:
     )
     setup_routes(app)
     add_pagination(app)
+    app.mount(f"/api/{settings.STATIC_FOLDER}", StaticFiles(directory='static'), name='static')
     # logging_config.dictConfig(settings.LOGGING)
     app.add_middleware(
         CORSMiddleware,
@@ -76,6 +80,13 @@ def create_app() -> FastAPI:
         app.state.mqtt = client
         app.state.sensors = SensorsState()
 
+        async def _on_msg(client, topic, payload, qos, properties):
+            if topic == "fitbox/ping":
+                data = json.loads(payload)
+                await app.state.sensors.touch(str(data["device_id"]))
+
+        client.on_message = _on_msg
+
         async def _connect():
             try:
                 await asyncio.wait_for(
@@ -87,6 +98,13 @@ def create_app() -> FastAPI:
                 logger.warning('⚠️  MQTT not connected: %s', e)
 
         asyncio.create_task(_connect())
+
+        async def _janitor():
+            while True:
+                await app.state.sensors.prune(CLEAN_TTL)
+                await asyncio.sleep(CLEAN_PERIOD)
+
+        asyncio.create_task(_janitor())
 
     @app.on_event('shutdown')
     async def _shutdown() -> None:

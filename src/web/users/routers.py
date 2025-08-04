@@ -7,7 +7,7 @@ from fastapi import (
     HTTPException,
     Request,
     Response,
-    status,
+    status, File, UploadFile,
 )
 from fastapi_filter import FilterDepends
 from fastapi_pagination import Page
@@ -21,17 +21,18 @@ from sqlalchemy.orm import selectinload
 
 from database.models import User
 from dependencies import get_db_session
+from main_schemas import ResponseErrorBody
 from web.users.filters import UsersFilter
 from web.users.schemas import (
     UserRead,
     UserUpdate,
     UserListRead
 )
-from web.users.services import calc_age, calc_score, calc_count_booking_info
+from web.users.services import calc_age, calc_score, calc_count_booking_info, get_full_link, save_file, delete_file
 from web.users.users import (
     current_active_user,
     current_superuser,
-    get_user_manager,
+    get_user_manager, current_user, UserManager,
 )
 
 router = APIRouter(prefix='/users', tags=['users'])
@@ -116,6 +117,7 @@ async def me(
     user.age = calc_age(user.date_of_birth, date.today())
     user.count_trainings, user.energy, user.status = calc_count_booking_info(user)
     user.score = calc_score(user)
+    user.photo_url = get_full_link(request, user.photo_url) if user.photo_url else None
     return schemas.model_validate(UserRead, user)
 
 
@@ -136,10 +138,11 @@ async def me(
         },
     },
 )
-async def get_user(user=Depends(get_user_or_404)):
+async def get_user(request: Request, user=Depends(get_user_or_404)):
     user.age = calc_age(user.date_of_birth, date.today())
     user.count_trainings, user.energy, user.status = calc_count_booking_info(user)
     user.score = calc_score(user)
+    user.photo_url = get_full_link(request, user.photo_url) if user.photo_url else None
     return schemas.model_validate(UserRead, user)
 
 
@@ -218,6 +221,77 @@ async def update_user(
         )
 
 
+@router.post(
+    '/add_photo',
+    response_model=UserRead,
+    status_code=status.HTTP_201_CREATED,
+    responses={
+        status.HTTP_400_BAD_REQUEST: {
+            'model': ResponseErrorBody,
+        },
+    },
+    dependencies=[Depends(current_user)],
+)
+async def add_photo(
+    request: Request,
+    file: UploadFile = File(...),
+    user_id: str | None = None,
+    user = Depends(current_user),
+    user_manager: UserManager = Depends(get_user_manager),
+    db_session: AsyncSession = Depends(get_db_session),
+):
+    if user.is_superuser:
+        if user_id is None:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail='User ID must be provided',
+            )
+        user = await get_user_or_404(request, user_id, user_manager=user_manager)
+    if file is None:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail='File must be provided',
+        )
+    file_name = await save_file(file, user)
+    user.photo_url = file_name
+    await db_session.commit()
+    await db_session.refresh(user)
+    user.photo_url = get_full_link(request, user.photo_url) if user.photo_url else None
+    return user
+
+
+@router.delete(
+    '/delete_photo',
+    response_class=Response,
+    status_code=status.HTTP_204_NO_CONTENT,
+    responses={
+        status.HTTP_400_BAD_REQUEST: {
+            'model': ResponseErrorBody,
+        },
+    },
+    dependencies=[Depends(current_user)],
+)
+async def delete_photo(
+    request: Request,
+    user_id: str | None = None,
+    user = Depends(current_user),
+    user_manager: UserManager = Depends(get_user_manager),
+    db_session: AsyncSession = Depends(get_db_session),
+):
+    if user.is_superuser:
+        if user_id is None:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail='User ID must be provided',
+            )
+        user = await get_user_or_404(request, user_id, user_manager=user_manager)
+    if user.photo_url:
+        delete_file(user.photo_url)
+    user.photo_url = None
+    await db_session.commit()
+    return None
+
+
 @router.delete(
     '/{id}',
     status_code=status.HTTP_204_NO_CONTENT,
@@ -243,5 +317,7 @@ async def delete_user(
         get_user_manager
     ),
 ):
+    if user.photo_url:
+        delete_file(user.photo_url)
     await user_manager.delete(user, request=request)
     return None

@@ -1,6 +1,7 @@
 import logging
 import os
 from logging.handlers import RotatingFileHandler
+from datetime import timedelta
 
 from dotenv import load_dotenv
 
@@ -8,17 +9,9 @@ load_dotenv()
 
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 STATIC_FOLDER = 'static'
-INSTRUCTIONS_FOLDER = 'instructions'
-SIGNATURES_FOLDER = 'signatures'
-TEMPLATES_FOLDER = 'templates'
-TRAINING_MODULES_FOLDER = 'training_modules'
+PHOTO_FOLDER = 'photos'
 UPLOAD_DIR = os.path.join(BASE_DIR, STATIC_FOLDER)
-INSTRUCTIONS_DIR = os.path.join(UPLOAD_DIR, INSTRUCTIONS_FOLDER)
-SIGNATURES_DIR = os.path.join(UPLOAD_DIR, SIGNATURES_FOLDER)
-TEMPLATES_DIR = os.path.join(UPLOAD_DIR, TEMPLATES_FOLDER)
-TRAINING_MODULES_DIR = os.path.join(UPLOAD_DIR, TRAINING_MODULES_FOLDER)
-OUTPUT_DIR = "/tmp/generated_docs"
-ZIP_NAME = "documents.zip"
+PHOTO_DIR = os.path.join(UPLOAD_DIR, PHOTO_FOLDER)
 
 BASE_URL = os.getenv('BASE_URL')
 
@@ -91,3 +84,5 @@ MQTT_BROKER = os.getenv('MQTT_BROKER')
 MQTT_PORT = os.getenv('MQTT_PORT')
 MQTT_TOPIC_START = "fitbox/start"
 MQTT_TOPIC_STOP = "fitbox/stop"
+CLEAN_TTL = timedelta(seconds=60)
+CLEAN_PERIOD = 10

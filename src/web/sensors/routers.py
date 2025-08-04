@@ -26,14 +26,19 @@ logger = logging.getLogger('control')
 
 @router.post('/register')
 async def register_device(
-    device: dict,
-    st: SensorsState = Depends(get_state),
+        device: dict,
+        st: SensorsState = Depends(get_state)
 ) -> dict:
-    if not (d_id := device.get('device_id')) or not (ip := device.get('ip')):
-        raise HTTPException(400, 'device_id и ip обязательны')
-    st.devices[d_id] = ip
-    logger.info('✅ Зарегистрировано %s → %s', d_id, ip)
-    return {'status': 'registered', 'count': len(st.devices)}
+    d_id = str(device.get("device_id") or "").strip()
+    ip   = device.get("ip")
+
+    if not d_id or not ip:
+        raise HTTPException(400, "device_id и ip обязательны")
+
+    await st.upsert(d_id, ip)
+    logger.info("✅ Зарегистрировано %s → %s", d_id, ip)
+    snapshot = await st.snapshot()
+    return {"status": "registered", "count": len(snapshot)}
 
 
 @router.post('/start_all', dependencies=[Depends(current_superuser)])
@@ -70,13 +75,20 @@ async def stop_all(
     return {'status': 'stop sent', 'training_active': st.training_active}
 
 
-@router.get('/status', dependencies=[Depends(current_superuser)])
+@router.get('/status')
 async def status(st: SensorsState = Depends(get_state)) -> dict:
+    snapshot = await st.snapshot()
     return {
-        'devices_registered': len(st.devices),
-        'training_active': st.training_active,
-        'devices': st.devices,
+        "devices_registered": len(snapshot),
+        "training_active": st.training_active,
+        "devices": {
+            did: {
+                "ip": info.ip,
+                "last_seen": info.last_seen.isoformat()
+            } for did, info in snapshot.items()
+        },
     }
+
 
 
 @router.post('/api/v1/hits/bulk')
