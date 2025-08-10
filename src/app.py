@@ -91,7 +91,7 @@ def create_app() -> FastAPI:
         app.state.mqtt = client
         app.state.sensors = SensorsState()
 
-        async def _on_connect(client, flags, rc, properties):
+        def _on_connect(client, flags, rc, properties):
             logger.info("🔌 MQTT connected: flags=%s rc=%s", flags, rc)
             client.subscribe('fitbox/ping', qos=1)
             logger.info("📡 Subscribed to fitbox/ping")
@@ -121,6 +121,7 @@ def create_app() -> FastAPI:
 
         client.on_message = _on_msg
 
+
         async def _connect():
             try:
                 await asyncio.wait_for(
@@ -128,6 +129,8 @@ def create_app() -> FastAPI:
                     timeout=5,
                 )
                 logger.info('✅ MQTT connected')
+                client.subscribe('fitbox/ping', qos=1)
+                logger.info("📡 (fallback) Subscribed to fitbox/ping")
             except (asyncio.TimeoutError, OSError) as e:
                 logger.warning('⚠️  MQTT not connected: %s', e)
 
