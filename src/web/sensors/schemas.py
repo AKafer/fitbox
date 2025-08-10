@@ -3,6 +3,11 @@ from typing import List
 from pydantic import BaseModel
 
 
+class RegisterInput(BaseModel):
+    device_id: str
+    ip: str
+
+
 class Hit(BaseModel):
     timeMs: int
     maxAccel: float

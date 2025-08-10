@@ -12,7 +12,7 @@ from database.models import Sprints
 from dependencies import get_db_session, get_mqtt, get_state
 from settings import MQTT_TOPIC_START, MQTT_TOPIC_STOP
 from state import SensorsState
-from web.sensors.schemas import HitsChunk, StartSprintInptut
+from web.sensors.schemas import HitsChunk, StartSprintInptut, RegisterInput
 from web.sensors.services import build_sprint_hits_excel
 from web.users.users import current_superuser
 
@@ -26,16 +26,17 @@ logger = logging.getLogger('control')
 
 @router.post('/register')
 async def register_device(
-    device: dict, st: SensorsState = Depends(get_state)
+    reg_input: RegisterInput,
+    st: SensorsState = Depends(get_state)
 ) -> dict:
-    d_id = str(device.get('device_id') or '').strip()
-    ip = device.get('ip')
+    d_id = reg_input.device_id
+    ip = reg_input.ip
 
     if not d_id or not ip:
-        raise HTTPException(400, 'device_id и ip обязательны')
+        raise HTTPException(400, 'device_id и ip required')
 
     await st.upsert(d_id, ip)
-    logger.info('✅ Зарегистрировано %s → %s', d_id, ip)
+    logger.info('✅ Registered %s → %s', d_id, ip)
     snapshot = await st.snapshot()
     return {'status': 'registered', 'count': len(snapshot)}
 
@@ -70,7 +71,7 @@ async def stop_all(
 ) -> dict:
     mqtt.publish(MQTT_TOPIC_STOP, 'ALL', qos=1)
     st.training_active = False
-    logger.info('📢 STOP всем устройствам')
+    logger.info('📢 STOP all devices')
     return {'status': 'stop sent', 'training_active': st.training_active}
 
 
