@@ -93,11 +93,13 @@ def create_app() -> FastAPI:
 
         async def _on_msg(client, topic, payload, qos, properties):
             if topic == 'fitbox/ping':
+                logger.debug('Received ping: %s', payload)
                 data = json.loads(payload)
                 device_id = str(data.get('device_id') or '').strip()
                 ip = data.get('ip')
                 if device_id:
                     await app.state.sensors.touch(device_id, ip=ip)
+                    logger.debug('Touched: %s', device_id)
 
         client.on_message = _on_msg
 
