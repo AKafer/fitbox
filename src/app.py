@@ -91,15 +91,33 @@ def create_app() -> FastAPI:
         app.state.mqtt = client
         app.state.sensors = SensorsState()
 
+        async def _on_connect(client, flags, rc, properties):
+            logger.info("🔌 MQTT connected: flags=%s rc=%s", flags, rc)
+            client.subscribe('fitbox/ping', qos=1)
+            logger.info("📡 Subscribed to fitbox/ping")
+
+        def _on_disconnect(client, packet, exc=None):
+            logger.warning("🔌 MQTT disconnected: exc=%s", exc)
+
+        def _on_subscribe(client, mid, qos, properties=None):
+            logger.info("✅ MQTT subscribe ack mid=%s qos=%s", mid, qos)
+
+        client.on_connect = _on_connect
+        client.on_disconnect = _on_disconnect
+        client.on_subscribe = _on_subscribe
+
         async def _on_msg(client, topic, payload, qos, properties):
-            if topic == 'fitbox/ping':
-                logger.debug('Received ping: %s', payload)
-                data = json.loads(payload)
-                device_id = str(data.get('device_id') or '').strip()
-                ip = data.get('ip')
-                if device_id:
-                    await app.state.sensors.touch(device_id, ip=ip)
-                    logger.debug('Touched: %s', device_id)
+            try:
+                logger.debug("📥 MQTT message: topic=%s qos=%s payload=%r", topic, qos, payload)
+                if topic == 'fitbox/ping':
+                    data = json.loads(payload)
+                    device_id = str(data.get('device_id') or '').strip()
+                    ip = data.get('ip')
+                    if device_id:
+                        await app.state.sensors.touch(device_id, ip=ip)
+                        logger.debug('🟢 touched %s (ip=%s)', device_id, ip)
+            except Exception as e:
+                logger.exception("❌ error in on_message: %s", e)
 
         client.on_message = _on_msg
 
