@@ -84,5 +84,9 @@ MQTT_BROKER = os.getenv('MQTT_BROKER')
 MQTT_PORT = os.getenv('MQTT_PORT')
 MQTT_TOPIC_START = "fitbox/start"
 MQTT_TOPIC_STOP = "fitbox/stop"
-CLEAN_TTL = timedelta(seconds=60)
+INACTIVE_AFTER = timedelta(minutes=1)
+DELETE_AFTER   = timedelta(minutes=20)
 CLEAN_PERIOD = 10
+
+# 'quarantine' | 'update' | 'drop'
+IP_MISMATCH_POLICY = 'quarantine'

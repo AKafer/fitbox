@@ -26,19 +26,18 @@ logger = logging.getLogger('control')
 
 @router.post('/register')
 async def register_device(
-        device: dict,
-        st: SensorsState = Depends(get_state)
+    device: dict, st: SensorsState = Depends(get_state)
 ) -> dict:
-    d_id = str(device.get("device_id") or "").strip()
-    ip   = device.get("ip")
+    d_id = str(device.get('device_id') or '').strip()
+    ip = device.get('ip')
 
     if not d_id or not ip:
-        raise HTTPException(400, "device_id и ip обязательны")
+        raise HTTPException(400, 'device_id и ip обязательны')
 
     await st.upsert(d_id, ip)
-    logger.info("✅ Зарегистрировано %s → %s", d_id, ip)
+    logger.info('✅ Зарегистрировано %s → %s', d_id, ip)
     snapshot = await st.snapshot()
-    return {"status": "registered", "count": len(snapshot)}
+    return {'status': 'registered', 'count': len(snapshot)}
 
 
 @router.post('/start_all', dependencies=[Depends(current_superuser)])
@@ -79,22 +78,26 @@ async def stop_all(
 async def status(st: SensorsState = Depends(get_state)) -> dict:
     snapshot = await st.snapshot()
     return {
-        "devices_registered": len(snapshot),
-        "training_active": st.training_active,
-        "devices": {
+        'devices_registered': len(snapshot),
+        'training_active': st.training_active,
+        'devices': {
             did: {
-                "ip": info.ip,
-                "last_seen": info.last_seen.isoformat()
-            } for did, info in snapshot.items()
+                'ip': info.ip,
+                'last_seen': info.last_seen.isoformat(),
+                'active': info.active,
+                'ip_mismatch': info.ip_mismatch,
+                'mismatch_ip': info.mismatch_ip,
+            }
+            for did, info in snapshot.items()
         },
     }
 
 
-
-@router.post('/api/v1/hits/bulk')
+@router.post('/hits/bulk')
 async def receive_hits(
     input_chunk: HitsChunk,
-    db_session: AsyncSession = Depends(get_db_session)
+    db_session: AsyncSession = Depends(get_db_session),
+    st: SensorsState = Depends(get_state),
 ) -> dict:
     logger.info(
         '(slot_id %s, sprint_id %s, sensor_id %s): accept: %d hits',
@@ -103,6 +106,7 @@ async def receive_hits(
         input_chunk.device_id,
         len(input_chunk.hits),
     )
+    await st.update_on_hit(input_chunk.device_id)
     query = (
         select(Sprints)
         .where(
@@ -150,7 +154,7 @@ async def receive_hits(
     }
 
 
-@router.get("/api/v1/hits/export")
+@router.get('/hits/export')
 async def export_sprint_hits(
     slot_id: int,
     sprint_id: int,
@@ -168,13 +172,16 @@ async def export_sprint_hits(
     )
     sprints = (await db_session.scalars(query)).all()
     if not sprints:
-        raise HTTPException(status_code=404, detail="No sprints found for the given slot and sprint IDs.")
+        raise HTTPException(
+            status_code=404,
+            detail='No sprints found for the given slot and sprint IDs.',
+        )
 
     xlsx_bytes = build_sprint_hits_excel(slot_id, sprint_id, sprints)
-    filename = f"sprint_{slot_id}_{sprint_id}.xlsx"
+    filename = f'sprint_{slot_id}_{sprint_id}.xlsx'
 
     return StreamingResponse(
         iter([xlsx_bytes]),
-        media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-        headers={"Content-Disposition": f'attachment; filename="{filename}"'},
+        media_type='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+        headers={'Content-Disposition': f'attachment; filename="{filename}"'},
     )

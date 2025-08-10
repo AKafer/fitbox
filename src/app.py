@@ -13,7 +13,14 @@ from starlette.staticfiles import StaticFiles
 import settings
 from monitoring.instumentator import verify_metrics_creds
 from routers import api_v1_router
-from settings import LOGGING, MQTT_BROKER, MQTT_PORT, CLEAN_TTL, CLEAN_PERIOD
+from settings import (
+    LOGGING,
+    MQTT_BROKER,
+    MQTT_PORT,
+    INACTIVE_AFTER,
+    CLEAN_PERIOD,
+    DELETE_AFTER,
+)
 from state import SensorsState
 
 
@@ -54,7 +61,11 @@ def create_app() -> FastAPI:
     )
     setup_routes(app)
     add_pagination(app)
-    app.mount(f"/api/{settings.STATIC_FOLDER}", StaticFiles(directory='static'), name='static')
+    app.mount(
+        f'/api/{settings.STATIC_FOLDER}',
+        StaticFiles(directory='static'),
+        name='static',
+    )
     # logging_config.dictConfig(settings.LOGGING)
     app.add_middleware(
         CORSMiddleware,
@@ -81,9 +92,12 @@ def create_app() -> FastAPI:
         app.state.sensors = SensorsState()
 
         async def _on_msg(client, topic, payload, qos, properties):
-            if topic == "fitbox/ping":
+            if topic == 'fitbox/ping':
                 data = json.loads(payload)
-                await app.state.sensors.touch(str(data["device_id"]))
+                device_id = str(data.get('device_id') or '').strip()
+                ip = data.get('ip')
+                if device_id:
+                    await app.state.sensors.touch(device_id, ip=ip)
 
         client.on_message = _on_msg
 
@@ -101,7 +115,7 @@ def create_app() -> FastAPI:
 
         async def _janitor():
             while True:
-                await app.state.sensors.prune(CLEAN_TTL)
+                await app.state.sensors.maintain(INACTIVE_AFTER, DELETE_AFTER)
                 await asyncio.sleep(CLEAN_PERIOD)
 
         asyncio.create_task(_janitor())
