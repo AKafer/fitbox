@@ -163,9 +163,9 @@ async def get_sprint_energy_list(
 async def update_sprint_in_db(sprints: Sequence[Sprints]) -> Sequence[Sprints]:
     for sprint in sprints:
         sprint.result = calculate_sprint_metrics(
-            sprint.data['hits'],
-            float(sprint.data['blink_interval']) or DEFAULT_BLINK_INTERVAL,
-            int(sprint.data['total_hits']),
+            sprint.data.get('hits', []),
+            float(sprint.data.get('blink_interval', DEFAULT_BLINK_INTERVAL)),
+            int(sprint.data.get('total_hits', 0)),
         )
     return sprints
 
