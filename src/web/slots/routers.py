@@ -15,7 +15,7 @@ from constants import (
     SPRINT_RESULTS_CACHE_TTL,
 )
 from core.simple_cache import Cache
-from database.models import Slots, User
+from database.models import Slots, User, Sprints
 from dependencies import get_db_session, get_cache
 from starlette.exceptions import HTTPException
 
@@ -208,6 +208,25 @@ async def get_sprint_results(
     user: User = Depends(current_user),
     cache: Cache = Depends(get_cache),
 ):
+    query = select(Slots).filter(Slots.id == slot_id)
+    slot = await db_session.scalar(query)
+    if slot is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f'Slot with id {slot_id} not found',
+        )
+    query = select(Sprints).where(
+        Sprints.slot_id == slot_id,
+        Sprints.sprint_id == sprint_id
+    )
+    result = await db_session.scalars(query)
+    sprints = result.all()
+    if not sprints:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f'Sprint with id {sprint_id} not found in slot {slot_id}',
+        )
+
     if recalculate:
         await recalculate_sprint_results(
             slot_id=slot_id, sprint_id=sprint_id, db_session=db_session

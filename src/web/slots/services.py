@@ -208,5 +208,4 @@ async def recalculate_bookings_results(
         sprints_data = await calculate_sprints_data(booking, db_session)
         booking.sprints_data = sprints_data
         calculate_booking_metrics(booking, sprints_data)
-        print(f'Recalculating booking {booking.id} results: {sprints_data}')
     return bookings
