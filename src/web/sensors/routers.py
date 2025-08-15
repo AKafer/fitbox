@@ -178,7 +178,7 @@ async def receive_hits(
             if input_chunk.is_last:
                 sprint.result = calculate_sprint_metrics(
                     sprint.data.get('hits', []),
-                    float(sprint.data.get('blink_interval', DEFAULT_BLINK_INTERVAL)),
+                    float(sprint.data.get('blink_interval') or DEFAULT_BLINK_INTERVAL),
                     int(sprint.data.get('total_hits', 0)),
                 )
             await db_session.commit()

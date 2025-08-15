@@ -164,7 +164,7 @@ async def update_sprint_in_db(sprints: Sequence[Sprints]) -> Sequence[Sprints]:
     for sprint in sprints:
         sprint.result = calculate_sprint_metrics(
             sprint.data.get('hits', []),
-            float(sprint.data.get('blink_interval', DEFAULT_BLINK_INTERVAL)),
+            float(sprint.data.get('blink_interval') or DEFAULT_BLINK_INTERVAL),
             int(sprint.data.get('total_hits', 0)),
         )
     return sprints
