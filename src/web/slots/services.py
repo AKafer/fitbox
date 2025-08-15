@@ -105,6 +105,7 @@ async def get_slot_energy_list(
             user_can_see_results = True
         energy_list.append(
             {
+                'id': str(booking.user.id),
                 'name': booking.user.name,
                 'last_name': booking.user.last_name,
                 'photo_url': booking.user.photo_url,
