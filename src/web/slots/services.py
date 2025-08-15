@@ -147,15 +147,16 @@ async def get_sprint_energy_list(
             )
         if current_user.id == user.id:
             user_can_see_results = True
+        sprint_result = sprint.result or {}
         energy_list.append(
             {
                 'id': str(current_user.name),
                 'name': current_user.name,
                 'last_name': current_user.last_name,
                 'photo_url': current_user.photo_url,
-                'power': sprint.result.get('power'),
-                'tempo': sprint.result.get('tempo'),
-                'energy': sprint.result.get('energy'),
+                'power': sprint_result.get('power', 0),
+                'tempo': sprint_result.get('tempo', 0),
+                'energy': sprint_result.get('energy', 0),
             }
         )
     return energy_list, user_can_see_results
