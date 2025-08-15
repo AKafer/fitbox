@@ -203,10 +203,11 @@ async def update_booking(
     user = await db_session.scalar(query)
     try:
         if update_input.is_done:
-            booking.sprints_data = await calculate_sprints_data(
+            sprints_data = await calculate_sprints_data(
                 booking, db_session
             )
-            calculate_booking_metrics(booking.sprints_data)
+            booking.sprints_data = sprints_data
+            calculate_booking_metrics(booking, sprints_data)
         if all(
             [
                 hasattr(update_input, 'is_done'),
