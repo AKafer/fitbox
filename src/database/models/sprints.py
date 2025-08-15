@@ -20,6 +20,11 @@ class Sprints(BaseModel):
         nullable=True,
         default=dict,
     )
+    result = sa.Column(
+        MutableDict.as_mutable(JSONB),
+        nullable=True,
+        default=dict,
+    )
 
     __table_args__ = (
         sa.UniqueConstraint(

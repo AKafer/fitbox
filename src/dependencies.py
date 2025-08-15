@@ -4,6 +4,7 @@ from fastapi import Request
 
 if TYPE_CHECKING:
     from state import SensorsState
+    from core.simple_cache import Cache
 from gmqtt import Client as MQTTClient
 from database.orm import Session
 
@@ -18,9 +19,14 @@ async def get_db_session() -> AsyncSession:
         finally:
             await session.close()
 
+
 def get_state(request: Request) -> "SensorsState":
     return request.app.state.sensors
 
 
 def get_mqtt(request: Request) -> MQTTClient:
     return request.app.state.mqtt
+
+
+def get_cache(request: Request) -> "Cache":
+    return request.app.state.cache

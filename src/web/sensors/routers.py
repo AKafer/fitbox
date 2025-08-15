@@ -4,16 +4,22 @@ from datetime import datetime, timezone
 from fastapi import APIRouter, Depends, HTTPException
 from gmqtt import Client as MQTTClient
 from sqlalchemy import and_, select
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
+from starlette import status
 from starlette.responses import StreamingResponse
 
-from constants import ALL_DEVICES_ID, CMD_START
+from constants import ALL_DEVICES_ID, CMD_START, DEFAULT_BLINK_INTERVAL
 from database.models import Sprints
 from dependencies import get_db_session, get_mqtt, get_state
+from main_schemas import ResponseErrorBody
 from settings import MQTT_TOPIC_START, MQTT_TOPIC_STOP
 from state import SensorsState
 from web.sensors.schemas import HitsChunk, StartSprintInptut, RegisterInput
-from web.sensors.services import build_sprint_hits_excel
+from web.sensors.services import (
+    build_sprint_hits_excel,
+    calculate_sprint_metrics,
+)
 from web.users.users import current_superuser
 
 router = APIRouter(
@@ -26,8 +32,7 @@ logger = logging.getLogger('control')
 
 @router.post('/register')
 async def register_device(
-    reg_input: RegisterInput,
-    st: SensorsState = Depends(get_state)
+    reg_input: RegisterInput, st: SensorsState = Depends(get_state)
 ) -> dict:
     d_id = reg_input.device_id
     ip = reg_input.ip
@@ -75,8 +80,20 @@ async def stop_all(
     return {'status': 'stop sent', 'training_active': st.training_active}
 
 
-@router.get('/status')
-async def status(st: SensorsState = Depends(get_state)) -> dict:
+@router.get(
+    '/status',
+    status_code=status.HTTP_200_OK,
+    responses={
+        status.HTTP_400_BAD_REQUEST: {
+            'model': ResponseErrorBody,
+        },
+        status.HTTP_404_NOT_FOUND: {
+            'model': ResponseErrorBody,
+        },
+    },
+    dependencies=[Depends(current_superuser)],
+)
+async def get_status(st: SensorsState = Depends(get_state)) -> dict:
     snapshot = await st.snapshot()
     return {
         'devices_registered': len(snapshot),
@@ -94,65 +111,90 @@ async def status(st: SensorsState = Depends(get_state)) -> dict:
     }
 
 
-@router.post('/hits/bulk')
+@router.post(
+    '/hits/bulk',
+    status_code=status.HTTP_200_OK,
+    responses={
+        status.HTTP_409_CONFLICT: {
+            'model': ResponseErrorBody,
+            'description': 'Concurrent update, please retry',
+        }
+    }
+)
 async def receive_hits(
     input_chunk: HitsChunk,
     db_session: AsyncSession = Depends(get_db_session),
     st: SensorsState = Depends(get_state),
 ) -> dict:
     logger.info(
-        '(slot_id %s, sprint_id %s, sensor_id %s): accept: %d hits',
+        '(slot_id %s, sprint_id %s, sensor_id %s): accept: %d hits - is_last: %s',
         input_chunk.session_id,
         input_chunk.sprint_id,
         input_chunk.device_id,
         len(input_chunk.hits),
+        input_chunk.is_last,
     )
     await st.update_on_hit(input_chunk.device_id)
-    query = (
-        select(Sprints)
-        .where(
-            and_(
-                Sprints.slot_id == int(input_chunk.session_id),
-                Sprints.sprint_id == int(input_chunk.sprint_id),
-                Sprints.sensor_id == input_chunk.device_id,
+    for _ in range(2):
+        try:
+            query = (
+                select(Sprints)
+                .where(
+                    and_(
+                        Sprints.slot_id == int(input_chunk.session_id),
+                        Sprints.sprint_id == int(input_chunk.sprint_id),
+                        Sprints.sensor_id == input_chunk.device_id,
+                    )
+                )
+                .with_for_update()
             )
-        )
-        .with_for_update()
-    )
-    sprint = await db_session.scalar(query)
-    if sprint is None:
-        sprint = Sprints(
-            slot_id=int(input_chunk.session_id),
-            sprint_id=int(input_chunk.sprint_id),
-            sensor_id=input_chunk.device_id,
-            created_at=datetime.now(timezone.utc),
-            data={'hits': []},
-        )
-    db_session.add(sprint)
+            sprint = await db_session.scalar(query)
+            if sprint is None:
+                sprint = Sprints(
+                    slot_id=int(input_chunk.session_id),
+                    sprint_id=int(input_chunk.sprint_id),
+                    sensor_id=input_chunk.device_id,
+                    created_at=datetime.now(timezone.utc),
+                    data={'hits': []},
+                )
+            db_session.add(sprint)
 
-    hits_list = sprint.data.setdefault('hits', [])
-    new_hits = [h.model_dump() for h in input_chunk.hits]
-    hits_list.extend(new_hits)
-    sprint.data['total_hits'] = len(hits_list)
-    sprint.data['hits'] = hits_list
-    sprint.data['blink_interval'] = input_chunk.blink_interval
+            hits_list = sprint.data.setdefault('hits', [])
+            new_hits = [h.model_dump() for h in input_chunk.hits]
+            hits_list.extend(new_hits)
+            sprint.data['total_hits'] = len(hits_list)
+            sprint.data['hits'] = hits_list
+            sprint.data['blink_interval'] = input_chunk.blink_interval
 
-    logger.debug(
-        '(slot_id %s, sprint_id %s, sensor_id %s): added: %d, total %d',
-        input_chunk.session_id,
-        input_chunk.sprint_id,
-        input_chunk.device_id,
-        len(new_hits),
-        sprint.data['total_hits'],
-    )
+            logger.debug(
+                '(slot_id %s, sprint_id %s, sensor_id %s): added: %d, total %d',
+                input_chunk.session_id,
+                input_chunk.sprint_id,
+                input_chunk.device_id,
+                len(new_hits),
+                sprint.data['total_hits'],
+            )
 
-    await db_session.commit()
+            if input_chunk.is_last:
+                sprint.result = calculate_sprint_metrics(
+                    sprint.data['hits'],
+                    float(sprint.data['blink_interval']) or DEFAULT_BLINK_INTERVAL,
+                    int(sprint.data['total_hits']),
+                )
+            await db_session.commit()
 
-    return {
-        'status': 'ok',
-        'added': len(new_hits),
-        'total': sprint.data['total_hits'],
-    }
+            return {
+                'status': 'ok',
+                'added': len(new_hits),
+                'total': sprint.data['total_hits'],
+                'is_last': input_chunk.is_last,
+                'result': sprint.result or {},
+            }
+        except IntegrityError:
+            await db_session.rollback()
+            continue
+
+    raise HTTPException(409, 'Concurrent update, please retry')
 
 
 @router.get('/hits/export')

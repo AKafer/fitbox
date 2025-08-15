@@ -11,6 +11,7 @@ from starlette.responses import PlainTextResponse
 from starlette.staticfiles import StaticFiles
 
 import settings
+from core.simple_cache import Cache
 from monitoring.instumentator import verify_metrics_creds
 from routers import api_v1_router
 from settings import (
@@ -90,6 +91,16 @@ def create_app() -> FastAPI:
         client = MQTTClient('api-backend')
         app.state.mqtt = client
         app.state.sensors = SensorsState()
+        app.state.cache = Cache(
+            settings.REDIS_URL,
+            namespace="fitbox",
+        )
+
+        try:
+            await app.state.cache.set("init:ping", "1", ttl=5)
+            logger.info("✅ Redis connected")
+        except Exception as e:
+            logger.exception("Redis connect failed: %s", e)
 
         def _on_connect(client, flags, rc, properties):
             logger.info("🔌 MQTT connected: flags=%s rc=%s", flags, rc)
@@ -146,5 +157,8 @@ def create_app() -> FastAPI:
     @app.on_event('shutdown')
     async def _shutdown() -> None:
         await app.state.mqtt.disconnect()
+        cache = getattr(app.state, "cache", None)
+        if cache:
+            await cache.close()
 
     return app

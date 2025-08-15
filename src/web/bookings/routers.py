@@ -12,10 +12,21 @@ from starlette.exceptions import HTTPException
 
 from main_schemas import ResponseErrorBody
 from web.bookings.filters import BookingsFilter
-from web.bookings.schemas import Booking, BookingCreateInput, BookingCreateByAdminInput, BookingUpdateInput, \
-    DetailedBooking
-from web.bookings.services import check_before_create, NotFoundSlotError, DuplicateBookingError, ExcessiveBookingError, \
-    update_booking_in_db, calculate_sprints_data
+from web.bookings.schemas import (
+    Booking,
+    BookingCreateInput,
+    BookingCreateByAdminInput,
+    BookingUpdateInput,
+    DetailedBooking,
+)
+from web.bookings.services import (
+    check_before_create,
+    NotFoundSlotError,
+    DuplicateBookingError,
+    ExcessiveBookingError,
+    update_booking_in_db,
+    calculate_sprints_data, calculate_booking_metrics,
+)
 from web.users.users import current_superuser, current_user
 
 router = APIRouter(
@@ -23,10 +34,11 @@ router = APIRouter(
     tags=['bookings'],
 )
 
+
 @router.get(
     '/',
     response_model=list[Booking],
-    dependencies=[Depends(current_superuser)]
+    dependencies=[Depends(current_superuser)],
 )
 async def get_all_bookings(
     db_session: AsyncSession = Depends(get_db_session),
@@ -41,12 +53,12 @@ async def get_all_bookings(
 @router.get(
     '/{booking_id:int}',
     response_model=DetailedBooking,
-    dependencies=[Depends(current_user)]
+    dependencies=[Depends(current_user)],
 )
 async def get_booking_by_id(
     booking_id: int,
     db_session: AsyncSession = Depends(get_db_session),
-    user: User = Depends(current_user)
+    user: User = Depends(current_user),
 ):
     query = select(Bookings).where(Bookings.id == booking_id)
     booking = await db_session.scalar(query)
@@ -75,12 +87,12 @@ async def get_booking_by_id(
             'model': ResponseErrorBody,
         },
     },
-    dependencies=[Depends(current_user)]
+    dependencies=[Depends(current_user)],
 )
 async def create_user_booking(
     booking_input: BookingCreateInput,
     db_session: AsyncSession = Depends(get_db_session),
-    user: User = Depends(current_user)
+    user: User = Depends(current_user),
 ):
     if user.is_superuser:
         raise HTTPException(
@@ -88,11 +100,11 @@ async def create_user_booking(
             detail=f'Superuser cannot create bookings',
         )
     try:
-        await check_before_create(booking_input.slot_id, user,  db_session)
+        await check_before_create(booking_input.slot_id, user, db_session)
     except (
         NotFoundSlotError,
         DuplicateBookingError,
-        ExcessiveBookingError
+        ExcessiveBookingError,
     ) as e:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
@@ -124,7 +136,7 @@ async def create_user_booking(
             'model': ResponseErrorBody,
         },
     },
-    dependencies=[Depends(current_superuser)]
+    dependencies=[Depends(current_superuser)],
 )
 async def create_admin_booking(
     booking_input: BookingCreateByAdminInput,
@@ -138,11 +150,11 @@ async def create_admin_booking(
             detail=f'Superuser cannot create bookings',
         )
     try:
-        await check_before_create(booking_input.slot_id, user,  db_session)
+        await check_before_create(booking_input.slot_id, user, db_session)
     except (
         NotFoundSlotError,
         DuplicateBookingError,
-        ExcessiveBookingError
+        ExcessiveBookingError,
     ) as e:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
@@ -173,7 +185,7 @@ async def create_admin_booking(
             'model': ResponseErrorBody,
         },
     },
-    dependencies=[Depends(current_superuser)]
+    dependencies=[Depends(current_superuser)],
 )
 async def update_booking(
     booking_id: int,
@@ -191,22 +203,17 @@ async def update_booking(
     user = await db_session.scalar(query)
     try:
         if update_input.is_done:
-            booking.sprints_data = await calculate_sprints_data(booking, db_session)
-            len_sprints_data = len(booking.sprints_data)
-            if len_sprints_data > 0:
-                sum_power, sum_energy, sum_tempo = 0, 0, 0
-                for key, value in booking.sprints_data.items():
-                    sum_power += value.get('power', 0)
-                    sum_energy += value.get('energy', 0)
-                    sum_tempo += value.get('tempo', 0)
-                booking.power = round(sum_power / len_sprints_data, 2)
-                booking.energy = round(sum_energy / len_sprints_data, 2)
-                booking.tempo = round(sum_tempo / len_sprints_data, 2)
-        if all([
-            hasattr(update_input, 'is_done'),
-            update_input.is_done,
-            booking.is_done is not True,
-        ]):
+            booking.sprints_data = await calculate_sprints_data(
+                booking, db_session
+            )
+            calculate_booking_metrics(booking.sprints_data)
+        if all(
+            [
+                hasattr(update_input, 'is_done'),
+                update_input.is_done,
+                booking.is_done is not True,
+            ]
+        ):
             if user.score is None:
                 user.score = 0
             elif user.score < 1:
@@ -235,12 +242,12 @@ async def update_booking(
             'model': ResponseErrorBody,
         },
     },
-    dependencies=[Depends(current_user)]
+    dependencies=[Depends(current_user)],
 )
 async def delete_booking(
     booking_id: int,
     db_session: AsyncSession = Depends(get_db_session),
-    user: User = Depends(current_user)
+    user: User = Depends(current_user),
 ):
     query = select(Bookings).filter(Bookings.id == booking_id)
     booking = await db_session.scalar(query)
@@ -249,7 +256,7 @@ async def delete_booking(
             status_code=status.HTTP_404_NOT_FOUND,
             detail=f'Booking with id {booking_id} not found',
         )
-    if not  user.is_superuser:
+    if not user.is_superuser:
         if booking.user_id != user.id:
             raise HTTPException(
                 status_code=status.HTTP_403_FORBIDDEN,

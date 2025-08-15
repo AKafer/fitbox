@@ -1,3 +1,5 @@
+import logging
+
 import sqlalchemy
 from fastapi import APIRouter, Depends
 from fastapi_filter import FilterDepends
@@ -6,8 +8,15 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from starlette import status
 from starlette.responses import Response
 
+from constants import (
+    SPRINT_RESULTS_CACHE_KEY,
+    SLOT_RESULTS_CACHE_KEY,
+    SLOT_RESULTS_CACHE_TTL,
+    SPRINT_RESULTS_CACHE_TTL,
+)
+from core.simple_cache import Cache
 from database.models import Slots, User
-from dependencies import get_db_session
+from dependencies import get_db_session, get_cache
 from starlette.exceptions import HTTPException
 
 from main_schemas import ResponseErrorBody
@@ -16,10 +25,21 @@ from web.slots.schemas import (
     Slot,
     SlotCreateInput,
     SlotUpdateInput,
-    BulkSlotCreateInput, BindInput,
+    BulkSlotCreateInput,
+    BindInput,
 )
-from web.slots.services import update_slot_in_db, calculate_free_places, check_bookings, ExistingBookingsError, \
-    check_complete_bindings, BindingsError
+from web.slots.services import (
+    update_slot_in_db,
+    calculate_free_places,
+    check_bookings,
+    ExistingBookingsError,
+    check_complete_bindings,
+    BindingsError,
+    get_sprint_energy_list,
+    SprintResultException,
+    SlotResultException,
+    get_slot_energy_list, recalculate_sprint_results, recalculate_all_sprints_results, recalculate_bookings_results,
+)
 from web.users.users import current_superuser, current_user
 
 router = APIRouter(
@@ -28,11 +48,18 @@ router = APIRouter(
 )
 
 
-@router.get('/', response_model=list[Slot], dependencies=[Depends(current_user)],)
+logger = logging.getLogger('control')
+
+
+@router.get(
+    '/',
+    response_model=list[Slot],
+    dependencies=[Depends(current_user)],
+)
 async def get_all_slots(
     slots_filter: SlotsFilter = FilterDepends(SlotsFilter),
     db_session: AsyncSession = Depends(get_db_session),
-    user: User = Depends(current_user)
+    user: User = Depends(current_user),
 ):
     query = select(Slots).order_by(Slots.id.desc())
     query = slots_filter.filter(query)
@@ -57,12 +84,12 @@ async def get_all_slots(
             'model': ResponseErrorBody,
         },
     },
-    dependencies=[Depends(current_user)]
+    dependencies=[Depends(current_user)],
 )
 async def get_slot_by_id(
     slot_id: int,
     db_session: AsyncSession = Depends(get_db_session),
-    user: User = Depends(current_user)
+    user: User = Depends(current_user),
 ):
     query = select(Slots).filter(Slots.id == slot_id)
     slot = await db_session.scalar(query)
@@ -78,9 +105,9 @@ async def get_slot_by_id(
     return slot
 
 
-@router.get(
+@router.post(
     '/results/{slot_id:int}',
-    response_model=dict[str, float],
+    response_model=list[dict[str, str | int | float | None]],
     responses={
         status.HTTP_400_BAD_REQUEST: {
             'model': ResponseErrorBody,
@@ -89,12 +116,15 @@ async def get_slot_by_id(
             'model': ResponseErrorBody,
         },
     },
-    dependencies=[Depends(current_user)]
+    dependencies=[Depends(current_user)],
 )
-async def get_results(
+async def get_slot_results(
     slot_id: int,
+    no_cache: bool = False,
+    recalculate: bool = False,
     db_session: AsyncSession = Depends(get_db_session),
-    user: User = Depends(current_user)
+    user: User = Depends(current_user),
+    cache: Cache = Depends(get_cache),
 ):
     query = select(Slots).filter(Slots.id == slot_id)
     slot = await db_session.scalar(query)
@@ -103,25 +133,126 @@ async def get_results(
             status_code=status.HTTP_404_NOT_FOUND,
             detail=f'Slot with id {slot_id} not found',
         )
-    bookings = slot.bookings
-    user_can_see_results = False
-    energy_dict = {}
-    for booking in bookings:
-        if not booking.is_done:
-            raise HTTPException(
-                status_code=status.HTTP_404_NOT_FOUND,
-                detail=f'Not all bookings are done for slot {slot_id}',
+
+    if recalculate:
+        await recalculate_all_sprints_results(
+            slot_id=slot_id, db_session=db_session
+        )
+        await recalculate_bookings_results(
+            bookings = slot.bookings, db_session=db_session
+        )
+        await db_session.commit()
+        await db_session.refresh(slot)
+
+    if not no_cache and not recalculate:
+        cashed_results = await cache.get_json(
+            SLOT_RESULTS_CACHE_KEY.format(slot_id=slot_id)
+        )
+        if cashed_results is not None:
+            user_ids = [str(u.get('id')) for u in cashed_results]
+            if not user.is_superuser and user.id not in user_ids:
+                raise HTTPException(
+                    status_code=status.HTTP_403_FORBIDDEN,
+                    detail='You do not have permission to view results for this slot',
+                )
+            logger.info(
+                'Returning cached results for slot_id %s',
+                slot_id,
             )
-        if booking.user_id == user.id:
-            user_can_see_results= True
-        energy_dict[f'{booking.user.last_name} {booking.user.name}'] = booking.energy
+            return cashed_results
+
+    try:
+        energy_list, user_can_see_results = await get_slot_energy_list(
+            slot=slot, user=user, db_session=db_session
+        )
+    except SlotResultException as e:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=str(e),
+        )
+
+    await cache.set_json(
+        SLOT_RESULTS_CACHE_KEY.format(slot_id=slot_id),
+        energy_list,
+        ttl=SLOT_RESULTS_CACHE_TTL,
+    )
+
     if not user.is_superuser and not user_can_see_results:
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail='You do not have permission to view results for this slot',
         )
-    sorted_dict = dict(sorted(energy_dict.items(), key=lambda kv: kv[1], reverse=True))
-    return sorted_dict
+
+    return energy_list
+
+
+@router.post(
+    '/results/{slot_id:int}/sprint/{sprint_id:int}',
+    response_model=list[dict[str, str | int | float | None]],
+    responses={
+        status.HTTP_400_BAD_REQUEST: {
+            'model': ResponseErrorBody,
+        },
+        status.HTTP_404_NOT_FOUND: {
+            'model': ResponseErrorBody,
+        },
+    },
+    dependencies=[Depends(current_user)],
+)
+async def get_sprint_results(
+    slot_id: int,
+    sprint_id: int,
+    no_cache: bool = False,
+    recalculate: bool = False,
+    db_session: AsyncSession = Depends(get_db_session),
+    user: User = Depends(current_user),
+    cache: Cache = Depends(get_cache),
+):
+    if recalculate:
+        await recalculate_sprint_results(
+            slot_id=slot_id, sprint_id=sprint_id, db_session=db_session
+        )
+
+    if not no_cache and not recalculate:
+        cashed_results = await cache.get_json(
+            SPRINT_RESULTS_CACHE_KEY.format(slot_id=slot_id, sprint_id=sprint_id)
+        )
+        if cashed_results is not None:
+            user_ids = [str(u.get('id')) for u in cashed_results]
+            if not user.is_superuser and user.id not in user_ids:
+                raise HTTPException(
+                    status_code=status.HTTP_403_FORBIDDEN,
+                    detail='You do not have permission to view results for this slot',
+                )
+            logger.info(
+                'Returning cached results for slot_id %s, sprint_id %s',
+                slot_id,
+                sprint_id,
+            )
+            return cashed_results
+
+    try:
+        energy_list, user_can_see_results = await get_sprint_energy_list(
+            slot_id, sprint_id, user, db_session
+        )
+    except SprintResultException as e:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=str(e),
+        )
+
+    await cache.set_json(
+        SPRINT_RESULTS_CACHE_KEY.format(slot_id=slot_id, sprint_id=sprint_id),
+        energy_list,
+        ttl=SPRINT_RESULTS_CACHE_TTL,
+    )
+    if not user.is_superuser and not user_can_see_results:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail='You do not have permission to view results for this slot',
+        )
+
+    return energy_list
 
 
 @router.post(
@@ -136,7 +267,7 @@ async def get_results(
             'model': ResponseErrorBody,
         },
     },
-    dependencies=[Depends(current_superuser)]
+    dependencies=[Depends(current_superuser)],
 )
 async def create_slot(
     slot_input: SlotCreateInput,
@@ -168,7 +299,7 @@ async def create_slot(
             'model': ResponseErrorBody,
         },
     },
-    dependencies=[Depends(current_superuser)]
+    dependencies=[Depends(current_superuser)],
 )
 async def save_bindings(
     bind_input: BindInput,
@@ -183,7 +314,9 @@ async def save_bindings(
         )
     try:
         result = await check_complete_bindings(bind_input, db_session)
-        slot.bindings = {str(b.user_id): b.sensor_id for b in bind_input.bindings}
+        slot.bindings = {
+            str(b.user_id): b.sensor_id for b in bind_input.bindings
+        }
         await db_session.commit()
         return result
     except (sqlalchemy.exc.IntegrityError, BindingsError) as e:
@@ -205,7 +338,7 @@ async def save_bindings(
             'model': ResponseErrorBody,
         },
     },
-    dependencies=[Depends(current_superuser)]
+    dependencies=[Depends(current_superuser)],
 )
 async def bulk_create_slot(
     bulk_slot_input: BulkSlotCreateInput,
@@ -220,7 +353,9 @@ async def bulk_create_slot(
         await db_session.commit()
         for db_slot in slots:
             await db_session.refresh(db_slot)
-            db_slot.free_places = await calculate_free_places(db_slot, db_session)
+            db_slot.free_places = await calculate_free_places(
+                db_slot, db_session
+            )
         return slots
     except sqlalchemy.exc.IntegrityError as e:
         raise HTTPException(
@@ -240,7 +375,7 @@ async def bulk_create_slot(
             'model': ResponseErrorBody,
         },
     },
-    dependencies=[Depends(current_superuser)]
+    dependencies=[Depends(current_superuser)],
 )
 async def update_slot(
     slot_id: int,
@@ -255,11 +390,11 @@ async def update_slot(
             detail=f'Slot with id {slot_id} not found',
         )
     try:
-         slot_db = await update_slot_in_db(
+        slot_db = await update_slot_in_db(
             db_session, slot, **update_input.model_dump(exclude_none=True)
         )
-         slot_db.free_places = await calculate_free_places(slot_db, db_session)
-         return slot_db
+        slot_db.free_places = await calculate_free_places(slot_db, db_session)
+        return slot_db
     except sqlalchemy.exc.IntegrityError as e:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
@@ -275,7 +410,7 @@ async def update_slot(
             'model': ResponseErrorBody,
         },
     },
-    dependencies=[Depends(current_superuser)]
+    dependencies=[Depends(current_superuser)],
 )
 async def delete_slot(
     slot_id: int,
@@ -298,6 +433,3 @@ async def delete_slot(
     await db_session.delete(slot)
     await db_session.commit()
     return Response(status_code=status.HTTP_204_NO_CONTENT)
-
-
-

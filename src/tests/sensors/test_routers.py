@@ -1,6 +1,7 @@
 from datetime import datetime, timedelta, timezone
 
 import pytest
+from fastapi import HTTPException
 
 from settings import (
     INACTIVE_AFTER,
@@ -8,6 +9,7 @@ from settings import (
     MQTT_TOPIC_START,
     MQTT_TOPIC_STOP,
 )
+from web.users.users import current_superuser
 
 
 @pytest.mark.asyncio
@@ -114,3 +116,20 @@ async def test_ip_mismatch_reflected_in_status(client, app):
     assert dev['active'] is False
     assert dev['ip_mismatch'] is True
     assert dev['mismatch_ip'] == '172.16.0.99'
+
+
+@pytest.mark.asyncio
+async def test_status_requires_auth(client, app):
+    def deny_dep():
+        raise HTTPException(status_code=401, detail='unauthorized')
+
+    old = app.dependency_overrides.get(current_superuser)
+    app.dependency_overrides[current_superuser] = deny_dep
+    try:
+        r = await client.get('/sensors/status')
+        assert r.status_code == 401
+    finally:
+        if old is None:
+            app.dependency_overrides.pop(current_superuser, None)
+        else:
+            app.dependency_overrides[current_superuser] = old

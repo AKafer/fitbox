@@ -1,7 +1,12 @@
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from constants import DEFAULT_BLINK_INTERVAL, KOEF_POWER, DEGREE_POWER, TEMPO_BORDER_PERCENT
+from constants import (
+    DEFAULT_BLINK_INTERVAL,
+    KOEF_POWER,
+    DEGREE_POWER,
+    TEMPO_BORDER_PERCENT,
+)
 from database.models import Slots, Bookings, User, Sprints
 
 
@@ -31,7 +36,9 @@ async def check_before_create(
     exists_user_bookings = result.scalars().all()
     for booking in exists_user_bookings:
         if booking.slot_id == slot_id:
-            raise DuplicateBookingError('Already exist booking for this user in this slot.')
+            raise DuplicateBookingError(
+                'Already exist booking for this user in this slot.'
+            )
     query = select(Bookings).filter(Bookings.slot_id == slot_id)
     result = await db_session.execute(query)
     exists_slot_bookings = result.scalars().all()
@@ -40,9 +47,7 @@ async def check_before_create(
 
 
 async def update_booking_in_db(
-        db_session: AsyncSession,
-        booking: Bookings,
-        **update_data: dict
+    db_session: AsyncSession, booking: Bookings, **update_data: dict
 ) -> Bookings:
     for field, value in update_data.items():
         setattr(booking, field, value)
@@ -51,63 +56,33 @@ async def update_booking_in_db(
     return booking
 
 
-def is_synced_hit(time_ms: int, blink_interval: float) -> bool:
-    if time_ms is None or blink_interval <= 0:
-        return False
-    k = round(time_ms / blink_interval)
-    nearest = k * blink_interval
-    return abs(time_ms - nearest) <= blink_interval * TEMPO_BORDER_PERCENT
-
-
-def calculate_sprint_metrics(hits: list, blink_interval: float, hit_count: int):
-    if not hits or hit_count == 0:
-        return 0, 0, 0
-    max_punch = max(float(hit.get('maxAccel', 0)) for hit in hits)
-    sum_punches = sum(float(hit.get('maxAccel', 0)) for hit in hits)
-    average_punch = sum_punches / hit_count if hit_count > 0 else 0
-    power = (average_punch / max_punch) * KOEF_POWER if max_punch > 0 else 0
-    synced_hits = 0
-    for hit in hits:
-        time_ms = hit.get('timeMs')
-        if time_ms is not None:
-            if is_synced_hit(int(time_ms), blink_interval):
-                synced_hits += 1
-    tempo = synced_hits / hit_count * 100  if blink_interval > 0 else 0
-    energy = tempo * (power / KOEF_POWER)**DEGREE_POWER
-    return tempo, power, energy
-
-
 async def calculate_sprints_data(
     booking: Bookings,
     db_session: AsyncSession,
 ):
-    query = (
-        select(Sprints)
-        .where(
-            Sprints.slot_id == booking.slot_id,
-            Sprints.sensor_id == booking.sensor_id
-        )
+    query = select(Sprints).where(
+        Sprints.slot_id == booking.slot_id,
+        Sprints.sensor_id == booking.sensor_id,
     )
     result = await db_session.execute(query)
     sprints = result.scalars().all()
-
     if not sprints:
         return {}
 
     sprints_data = {}
     for sprint in sprints:
-        current_sprint_data = (sprint.data or {}).get('hits', [])
-        if not current_sprint_data:
-            continue
-        blink_interval = float(
-            sprint.data.get("blink_interval") or DEFAULT_BLINK_INTERVAL
-        )
-        hit_count = len(current_sprint_data)
-        tempo, power, energy = calculate_sprint_metrics(current_sprint_data, blink_interval, hit_count)
-        sprints_data[str(sprint.sprint_id)] = {
-            'power': round(power, 2),
-            'energy': round(energy, 2),
-            'tempo': round(tempo, 2),
-        }
-
+        sprints_data[str(sprint.sprint_id)] = sprint.result or {}
     return sprints_data
+
+
+def calculate_booking_metrics(booking, sprints_data: dict) -> None:
+    len_sprints_data = len(sprints_data)
+    if len_sprints_data > 0:
+        sum_power, sum_energy, sum_tempo = 0, 0, 0
+        for key, value in sprints_data.items():
+            sum_power += value.get('power', 0)
+            sum_energy += value.get('energy', 0)
+            sum_tempo += value.get('tempo', 0)
+        booking.power = round(sum_power / len_sprints_data, 2)
+        booking.energy = round(sum_energy / len_sprints_data, 2)
+        booking.tempo = round(sum_tempo / len_sprints_data, 2)

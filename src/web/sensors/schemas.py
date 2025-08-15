@@ -19,6 +19,7 @@ class HitsChunk(BaseModel):
     sprint_id: str | None = None
     blink_interval: str | None = None
     hits: List[Hit]
+    is_last: bool = False
 
 
 class StartSprintInptut(BaseModel):

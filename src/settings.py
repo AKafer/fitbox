@@ -90,3 +90,5 @@ CLEAN_PERIOD = 10
 
 # 'quarantine' | 'update' | 'drop'
 IP_MISMATCH_POLICY = 'quarantine'
+
+REDIS_URL = os.getenv('REDIS_URL', default='redis://localhost:6379/0')

@@ -3,7 +3,7 @@ from datetime import datetime, timedelta, timezone
 
 import pytest
 
-from state import SensorsState, DeviceInfo
+from state import SensorsState
 
 
 @pytest.mark.asyncio

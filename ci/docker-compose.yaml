@@ -19,6 +19,21 @@ services:
     ports:
       - "5433:5432"
 
+  redis:
+    container_name: fitbox_redis
+    image: redis:7-alpine
+    restart: unless-stopped
+    command: [ "redis-server", "--appendonly", "yes" ]
+    volumes:
+      - redis_data_fitbox:/data
+    healthcheck:
+      test: [ "CMD", "redis-cli", "ping" ]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+    networks:
+      - fitbox
+
   app:
     container_name: fitbox_app
     image: akafer/fitbox
@@ -49,6 +64,7 @@ services:
     depends_on:
       db: {condition: service_healthy}
       mosquitto: {condition: service_started}
+      redis: { condition: service_healthy }
     networks:
       - fitbox
 
@@ -69,6 +85,7 @@ services:
 
 volumes:
   postgres_data_fitbox:
+  redis_data_fitbox:
 
 networks:
   fitbox:
