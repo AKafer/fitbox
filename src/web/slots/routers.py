@@ -150,7 +150,7 @@ async def get_slot_results(
         )
         if cashed_results is not None:
             user_ids = [str(u.get('id')) for u in cashed_results]
-            if not user.is_superuser and user.id not in user_ids:
+            if not user.is_superuser and str(user.id) not in user_ids:
                 raise HTTPException(
                     status_code=status.HTTP_403_FORBIDDEN,
                     detail='You do not have permission to view results for this slot',
@@ -238,7 +238,7 @@ async def get_sprint_results(
         )
         if cashed_results is not None:
             user_ids = [str(u.get('id')) for u in cashed_results]
-            if not user.is_superuser and user.id not in user_ids:
+            if not user.is_superuser and str(user.id) not in user_ids:
                 raise HTTPException(
                     status_code=status.HTTP_403_FORBIDDEN,
                     detail='You do not have permission to view results for this slot',
