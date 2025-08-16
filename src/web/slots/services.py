@@ -101,7 +101,7 @@ async def get_slot_energy_list(
             raise SlotResultException(
                 f'Not all bookings are done for slot {slot.id}',
             )
-        if booking.user_id == user.id:
+        if str(booking.user_id) == str(user.id):
             user_can_see_results = True
         energy_list.append(
             {
@@ -145,12 +145,12 @@ async def get_sprint_energy_list(
             raise SprintResultException(
                 f'User with sensor_id {sprint.sensor_id} not found in slot {slot_id}',
             )
-        if current_user.id == user.id:
+        if str(current_user.id) == str(user.id):
             user_can_see_results = True
         sprint_result = sprint.result or {}
         energy_list.append(
             {
-                'id': str(current_user.name),
+                'id': str(current_user.id),
                 'name': current_user.name,
                 'last_name': current_user.last_name,
                 'photo_url': current_user.photo_url,
