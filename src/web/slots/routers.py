@@ -39,6 +39,7 @@ from web.slots.services import (
     SprintResultException,
     SlotResultException,
     get_slot_energy_list, recalculate_sprint_results, recalculate_all_sprints_results, recalculate_bookings_results,
+    process_bookings_results,
 )
 from web.users.users import current_superuser, current_user
 
@@ -163,7 +164,7 @@ async def get_slot_results(
 
     try:
         energy_list, user_can_see_results = await get_slot_energy_list(
-            slot=slot, user=user, db_session=db_session
+            slot=slot, user=user
         )
     except SlotResultException as e:
         raise HTTPException(
@@ -346,6 +347,44 @@ async def save_bindings(
 
 
 @router.post(
+    '/complete_training/{slot_id:int}',
+    status_code=status.HTTP_200_OK,
+    responses={
+        status.HTTP_400_BAD_REQUEST: {
+            'model': ResponseErrorBody,
+        },
+        status.HTTP_404_NOT_FOUND: {
+            'model': ResponseErrorBody,
+        },
+    },
+    dependencies=[Depends(current_superuser)],
+)
+async def complete_training(
+    slot_id: int,
+    db_session: AsyncSession = Depends(get_db_session),
+):
+    query = select(Slots).where(Slots.id == slot_id)
+    slot = await db_session.scalar(query)
+    if slot is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f'Slot with id {slot_id} not found',
+        )
+    if slot.is_done:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f'Slot with id {slot_id} is already completed',
+        )
+    slot.is_done = True
+    await process_bookings_results(
+        bookings=slot.bookings, db_session=db_session
+    )
+    await db_session.commit()
+    await db_session.refresh(slot)
+    return Response('Slot training completed successfully', status_code=status.HTTP_200_OK)
+
+
+@router.post(
     '/bulk',
     response_model=list[Slot],
     status_code=status.HTTP_201_CREATED,
@@ -443,7 +482,7 @@ async def delete_slot(
             detail=f'Slot with id {slot_id} not found',
         )
     try:
-        await check_bookings(slot, db_session)
+        await check_bookings(slot)
     except ExistingBookingsError as e:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,

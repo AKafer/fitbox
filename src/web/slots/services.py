@@ -43,17 +43,12 @@ async def calculate_free_places(slot: Slots, db_session: AsyncSession) -> int:
     return max(0, slot.number_of_places - len(exists_slot_bookings))
 
 
-async def check_bookings(slot: Slots, db_session: AsyncSession) -> None:
-    query = select(Bookings).filter(Bookings.slot_id == slot.id)
-    result = await db_session.execute(query)
-    exists_slot_bookings = result.scalars().all()
-    for booking in exists_slot_bookings:
-        if booking.is_done:
-            raise ExistingBookingsError('This slot already has done bookings.')
-        if any([booking.power, booking.energy, booking.tempo]):
-            raise ExistingBookingsError(
-                'This slot already has bookings with power, energy or tempo set.'
-            )
+async def check_bookings(slot: Slots) -> None:
+    if slot.is_done:
+        raise ExistingBookingsError('This slot is already done.')
+    if slot.bookings.count() > 0:
+        raise ExistingBookingsError('This slot already has bookings.')
+
 
 
 async def check_complete_bindings(
@@ -91,16 +86,12 @@ async def check_complete_bindings(
 
 
 async def get_slot_energy_list(
-    slot: Slots, user: User, db_session: AsyncSession
+    slot: Slots, user: User
 ) -> tuple[list[dict[str, int | str | float | None]], bool]:
     bookings = slot.bookings
     user_can_see_results = False
     energy_list = []
     for booking in bookings:
-        if not booking.is_done:
-            raise SlotResultException(
-                f'Not all bookings are done for slot {slot.id}',
-            )
         if str(booking.user_id) == str(user.id):
             user_can_see_results = True
         energy_list.append(
@@ -210,3 +201,19 @@ async def recalculate_bookings_results(
         booking.sprints_data = sprints_data
         calculate_booking_metrics(booking, sprints_data)
     return bookings
+
+
+async def process_bookings_results(bookings: Sequence[Bookings], db_session: AsyncSession) -> Sequence[Bookings]:
+    for booking in bookings:
+        user = booking.user
+        sprints_data = await calculate_sprints_data(
+            booking, db_session
+        )
+        booking.sprints_data = sprints_data
+        calculate_booking_metrics(booking, sprints_data)
+        if user.score is None:
+            user.score = 0
+        elif user.score < 1:
+            user.score = 0
+        else:
+            user.score -= 1

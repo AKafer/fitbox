@@ -19,6 +19,7 @@ class Slot(BaseModel):
     id: int
     type: str | None
     time: datetime
+    is_done: bool = False
 
     model_config = {"from_attributes": True}
 
@@ -28,7 +29,6 @@ class Booking(BaseModel):
     created_at: datetime
     source_record: str | None = None
     slot_id: int
-    is_done: bool = False
     power: float | None = None
     energy: float | None = None
     tempo: float | None = None

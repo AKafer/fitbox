@@ -14,6 +14,7 @@ class Slots(BaseModel):
     time = sa.Column(sa.DateTime(timezone=True), nullable=False)
     number_of_places = sa.Column(sa.Integer, nullable=False, default=0)
     free_places = sa.Column(sa.Integer, nullable=False, default=0)
+    is_done = sa.Column(sa.Boolean, default=False, nullable=False)
     bindings = sa.Column(
         MutableDict.as_mutable(JSONB),
         nullable=True,

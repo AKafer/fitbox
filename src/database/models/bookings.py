@@ -21,7 +21,6 @@ class Bookings(BaseModel):
         nullable=False
     )
     sensor_id = sa.Column(sa.String(128), nullable=True)
-    is_done = sa.Column(sa.Boolean, default=False, nullable=False)
     power = sa.Column(sa.Float, nullable=True)
     energy = sa.Column(sa.Float, nullable=True)
     tempo = sa.Column(sa.Float, nullable=True)

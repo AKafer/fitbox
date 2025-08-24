@@ -33,9 +33,9 @@ def calc_age(born: date, today: date | None = None) -> int | None:
 def calc_count_booking_info(user: User) -> (int, float, str):
     trainings_count, energy = 0, 0
     for booking in user.bookings:
-        if hasattr(booking, 'is_done') and booking.is_done:
+        if booking.slot and booking.slot.is_done:
             trainings_count += 1
-            if hasattr(booking, 'energy'):
+            if booking.energy:
                 energy += booking.energy or 0
     status = ''
     for installed_status, level in constants.status_levels.items():

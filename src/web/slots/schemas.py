@@ -18,9 +18,11 @@ class Slot(BaseModel):
     type: str | None
     time: datetime
     number_of_places: int
+    is_done: bool = False
     free_places: int | None = 0
     bookings: list[Booking]
     bindings: dict[str, str] | None = None
+
 
     model_config = {"from_attributes": True}
 
