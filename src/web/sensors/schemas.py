@@ -1,6 +1,6 @@
 from typing import List
 
-from pydantic import BaseModel
+from pydantic import BaseModel, Field, ConfigDict
 
 
 class RegisterInput(BaseModel):
@@ -20,6 +20,9 @@ class HitsChunk(BaseModel):
     blink_interval: str | None = None
     hits: List[Hit]
     is_last: bool = False
+    force_threshold: float | None = None
+    trim_percent: float | None = None
+    percentile_level: float | None = None
 
 
 class StartSprintInptut(BaseModel):

@@ -1,0 +1,1 @@
+ python scripts/excel_to_hits.py -f ~/Desktop/private/fitbox/test_punch_0609/test_punch_0609/sprint_270_1.xlsx -s BAG03

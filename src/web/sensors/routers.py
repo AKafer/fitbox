@@ -180,6 +180,9 @@ async def receive_hits(
                     sprint.data.get('hits', []),
                     float(sprint.data.get('blink_interval') or DEFAULT_BLINK_INTERVAL),
                     int(sprint.data.get('total_hits', 0)),
+                    force_threshold=input_chunk.force_threshold,
+                    trim_percent=input_chunk.trim_percent,
+                    percentile_level=input_chunk.percentile_level,
                 )
             await db_session.commit()
 
