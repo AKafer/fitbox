@@ -145,18 +145,29 @@ def create_app() -> FastAPI:
             except (asyncio.TimeoutError, OSError) as e:
                 logger.warning('⚠️  MQTT not connected: %s', e)
 
-        asyncio.create_task(_connect())
+        app.state.mqtt_connect_task = asyncio.create_task(_connect())
 
         async def _janitor():
             while True:
                 await app.state.sensors.maintain(INACTIVE_AFTER, DELETE_AFTER)
                 await asyncio.sleep(CLEAN_PERIOD)
 
-        asyncio.create_task(_janitor())
+        app.state.janitor_task = asyncio.create_task(_janitor())
 
     @app.on_event('shutdown')
     async def _shutdown() -> None:
-        await app.state.mqtt.disconnect()
+        for attr in ('janitor_task', 'mqtt_connect_task'):
+            task = getattr(app.state, attr, None)
+            if task and not task.done():
+                task.cancel()
+                try:
+                    await task
+                except asyncio.CancelledError:
+                    pass
+        try:
+            await app.state.mqtt.disconnect()
+        except Exception:
+            pass
         cache = getattr(app.state, "cache", None)
         if cache:
             await cache.close()

@@ -37,7 +37,7 @@ services:
   app:
     container_name: fitbox_app
     image: akafer/fitbox
-    restart: on-failure
+    restart: unless-stopped
     ports:
       - "8850:8850"
     command: >
