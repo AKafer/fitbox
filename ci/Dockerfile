@@ -20,15 +20,16 @@ RUN apt-get update && apt-get upgrade -y && \
 RUN pip install --no-cache poetry==2.1.1
 
 COPY pyproject.toml poetry.lock /app/
-COPY src/ /app/src
-RUN rm -rf /app/src/logs && rm -rf /app/src/static
-RUN mkdir /app/src/logs && touch /app/src/logs/app.log
-RUN mkdir -p /app/src/static && \
-    mkdir -p /app/src/static/photos
 
 ENV PYTHONPATH "${PYTHONPATH}:/app/src"
 ENV PYTHONUNBUFFERED=TRUE
 
 RUN cd /app && poetry config virtualenvs.create false && poetry install --no-root
+
+COPY src/ /app/src
+RUN rm -rf /app/src/logs && rm -rf /app/src/static
+RUN mkdir /app/src/logs && touch /app/src/logs/app.log
+RUN mkdir -p /app/src/static && \
+    mkdir -p /app/src/static/photos
 
 WORKDIR /app/src
