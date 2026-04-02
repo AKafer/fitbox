@@ -155,9 +155,7 @@ class UserManager(UUIDIDMixin, BaseUserManager[User, uuid.UUID]):
             result = await db_session.execute(query)
             try:
                 user = result.unique().scalar_one()
-            except sqlalchemy.exc.MultipleResultsFound:
-                raise exceptions.UserNotExists()
-            if user is None:
+            except (sqlalchemy.exc.MultipleResultsFound, sqlalchemy.exc.NoResultFound):
                 raise exceptions.UserNotExists()
             return user
 
