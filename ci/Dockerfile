@@ -4,7 +4,6 @@ LABEL authors="s-storozhuk"
 RUN apt-get update && apt-get upgrade -y && \
   apt-get -y install \
     libpq-dev gcc \
-    pip \
     bash \
     expect \
     curl \
@@ -17,7 +16,8 @@ RUN apt-get update && apt-get upgrade -y && \
     libssl-dev \
   && apt-get clean && rm -rf /var/lib/apt/lists/*
 
-RUN pip install --no-cache poetry==2.1.1
+RUN pip install --upgrade pip setuptools && \
+    pip install --no-cache poetry==2.1.1
 
 COPY pyproject.toml poetry.lock /app/
 
