@@ -16,8 +16,6 @@ services:
       retries: 3
     networks:
       - fitbox
-    ports:
-      - "5433:5432"
 
   redis:
     container_name: fitbox_redis
